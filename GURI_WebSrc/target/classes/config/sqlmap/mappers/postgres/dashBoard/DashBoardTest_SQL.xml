@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dashBoardTest">
+	<select id="selectChartDateList" resultType="resultCamelMap">
+		select count(0),case when department = 'null' then '특정 과 없음' else department end as department from public.guri_mw_key_word_test where 1=1
+		and start_date between '2021-05-01' and '2021-05-30'
+		group by department order by count desc limit 15 
+	</select>
+	
+	<select id="selectWordCloudList" resultType="resultCamelMap">
+		select keyword , keyword_count  from public.guri_mw_key_word_test where 1=1 
+			and start_date between '2021-05-23' and '2021-05-30'
+			and department ='건설과' order by keyword_count desc limit 40
+	</select>
+	
+	<select id="selectLineChartList" resultType="resultCamelMap">
+		select count(0), start_date from public.guri_mw_key_word_test where 1=1
+		and start_date between '2021-05-01' and '2021-05-30' and department ='건설과'
+		group by start_date order by start_date asc
+	</select>
+	
+	<select id="selectTable" resultType="resultCamelMap">
+		select data_tp_nm, tbl_nm
+		from mngr_ulod_data_list
+		where 1=1 and data_tp_id = #{filePk}
+	</select>
+	
+	<select id="selectTableColumn" resultType="resultCamelMap">
+		      SELECT cols.column_name,
+           (
+              SELECT pg_catalog.col_description(c.oid, cols.ordinal_position::int)
+                FROM pg_catalog.pg_class c
+               WHERE 1=1
+                     AND c.oid = (SELECT cols.table_name::regclass::oid) 
+                     AND c.relname = cols.table_name
+             ) as column_comment
+        FROM information_schema.columns cols
+       WHERE 1=1
+             AND cols.table_schema  = #{schema}
+             AND cols.table_name    = #{tableNm};
+	</select>
+	
+	<select id="selectTableRecentData" resultType="resultCamelMap">
+		 select b.*
+		   from (select max(std_yr) from ${schema}.${tableNm}) a, ${schema}.${tableNm} b
+		  where 1=1 and b.std_yr = a.max
+	</select>
+	
+	<select id="selectTableAllData" resultType="resultCamelMap">
+		    select * from ${schema}.${tableNm}
+	</select>
+	
+	
+</mapper>

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="OutDataRegDAO">
+
+	<!-- 분야별 데이터 목록 조회 -->
+	<select id="selectOutDataList" parameterType="map" resultType="resultCamelMap">
+		WITH code_list AS 
+		(
+		SELECT data_tp_id as code_id, data_tp_nm as code_name, tbl_nm as code_desc, '인구' AS gubun_name
+		  FROM mng_ulod_data_list
+		 WHERE split_part(data_tp_id, '_', 1) = 'POPL'
+		   AND use_yn = 'Y'
+		UNION ALL
+		SELECT data_tp_id as code_id, data_tp_nm as code_name, tbl_nm as code_desc, '매출' AS gubun_name
+		  FROM mng_ulod_data_list
+		 WHERE split_part(data_tp_id, '_', 1) = 'SALE'
+		   AND use_yn = 'Y'
+		UNION ALL
+		SELECT data_tp_id as code_id, data_tp_nm as code_name, tbl_nm as code_desc, '매출' AS gubun_name
+		  FROM mng_ulod_data_list
+		 WHERE split_part(data_tp_id, '_', 1) = 'TEST'
+		   AND use_yn = 'Y'
+		)
+		SELECT code_id, code_name, code_desc, gubun_name, target_month, atch_file_id, create_start_date, create_end_date,
+		       coalesce(orignl_file_nm, '') AS orignl_file_nm
+		  FROM (
+				SELECT CD.code_id, CD.code_name, CD.code_desc, CD.gubun_name, 
+				       coalesce(UD.aplcn_ym,'') AS target_month,
+				       coalesce(UD.atch_file_id,'') AS atch_file_id, 
+				       to_char(UD.data_crt_bgng_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS create_start_date,
+				       to_char(UD.data_crt_end_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS create_end_date,
+				       (SELECT orig_atch_file_nm FROM mng_atch_file_info WHERE atch_file_id = UD.atch_file_id) AS orignl_file_nm
+				  FROM code_list AS CD LEFT JOIN mng_ulod_data_info AS UD
+				       ON CD.code_id = UD.data_tp_id
+				 ORDER BY CD.code_id
+			) A 
+		  
+	</select>
+	
+	<select id="selectOutDataHisList" parameterType="map" resultType="resultCamelMap">
+		SELECT 
+	           data_tp_id as code_id, 
+	           aplcn_ym as target_month, 
+	           atch_file_id as atch_file_id, 
+	           prcs_tp_cd as proc_type_cd, 
+	           prcs_resl as proc_desc, 
+	           prcs_resl_msg as result_msg,
+			   to_char(prcs_bgng_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS proc_start_time, 
+			   to_char(prcs_end_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS proc_end_time,
+			   to_char(crt_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS create_date,
+		       (CASE WHEN prcs_tp_cd = 'U' THEN '업로드'
+		             WHEN prcs_tp_cd = 'D' THEN '데이터'
+		             WHEN prcs_tp_cd = 'A' THEN '통계'
+		       END) AS gubun_name
+		  FROM mng_ulod_data_hist
+		 WHERE data_tp_id = #{codeId}
+		 ORDER BY crt_dt DESC, prcs_tp_cd ASC
+	</select>
+
+	<!-- Upload File 정보 조회하기 -->
+	<select id="selectUpliadFileInfo" parameterType="map" resultType="resultCamelMap">
+	
+		SELECT UD.atch_file_id, 
+		       FD.atch_file_strg_path as file_stre_cours, FD.strg_file_nm as stre_file_nm, FD.orig_atch_file_nm as orignl_file_nm, FD.file_extn as file_extsn
+		  FROM mng_ulod_data_info AS UD INNER JOIN mng_atch_file_info FD
+		       ON UD.atch_file_id = FD.atch_file_id
+		 WHERE UD.atch_file_id = #{atchFileId}
+	
+	</select>
+	
+	<insert id="insertFileUploadInfo" parameterType="map">
+
+		WITH upload_list AS (
+			UPDATE mng_ulod_data_info AS T
+			   SET atch_file_id 		= #{atchFileId},
+			       aplcn_ym			= #{targetMonth},
+			   	   data_crt_bgng_dt 	= #{createStartDate}::timestamp,
+			   	   data_crt_end_dt 		= #{createEndDate}::timestamp,
+			   	   data_crt_user_id 	= #{loginId}
+			 WHERE data_tp_id = #{codeId}
+			RETURNING T.*
+		)
+		INSERT INTO mng_ulod_data_info
+			(data_tp_id, aplcn_ym, atch_file_id, data_crt_bgng_dt, data_crt_end_dt, data_crt_user_id)
+		SELECT #{codeId}, #{targetMonth}, #{atchFileId}, #{createStartDate}::timestamp, #{createEndDate}::timestamp, #{loginId}
+		WHERE NOT EXISTS (SELECT * FROM upload_list)
+
+	</insert>
+	
+	<!-- 업로드 데이터 History 저장하기 -->
+	<insert id="insertFileUploadHistory" parameterType="map">
+	   INSERT INTO public.mng_ulod_data_hist
+			(gid, data_tp_id, aplcn_ym, atch_file_id, tot_row_cnt, ulod_scs_row_cnt, prcs_tp_cd, prcs_resl, prcs_resl_msg, prcs_bgng_dt, prcs_end_dt, crt_dt, crt_user_id)
+		VALUES
+			(
+              (
+              select 
+			       case when max(gid) is null then 0
+			       else max(gid)+1 end as gid
+			 from mng_ulod_data_hist
+              ), #{codeId}, #{targetMonth}, #{atchFileId}, ${totCnt}, ${suTotCnt}, #{procTypeCd}, #{procDesc}, #{resultMsg}, #{procStartTime}::timestamp, #{procEndTime}::timestamp, Now(), #{loginId}
+            );
+		
+	</insert>
+	
+	<!-- 테스트 임시 테이블 생성 -->
+	<update id="createSvcInfl" parameterType="map">
+		CREATE TABLE public.test_dsu_po_svc_infl_202205_if (
+			like public.test_dsu_po_svc_infl_202205
+		)
+	</update>
+	
+	<!-- 테스트 임시 테이블에 내용 실제 테스트 테이블에 값 삽입 -->
+	<insert id="insertSvcInfl" parameterType="map">
+		INSERT INTO public.test_dsu_po_svc_infl_202205
+		SELECT *
+		FROM public.test_dsu_po_svc_infl_202205_if
+	</insert>	
+	
+	<!-- 테스트 임시 테이블 삭제 -->
+	<delete id="deleteSvcInfl" parameterType="map">
+		DROP TABLE public.test_dsu_po_svc_infl_202205_if
+	</delete>
+</mapper>

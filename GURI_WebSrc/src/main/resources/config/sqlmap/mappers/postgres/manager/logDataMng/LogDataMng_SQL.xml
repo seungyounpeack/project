@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 로그기록
+ * @author 김부권
+ * @since 2021. 09. 23.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+
+ -->
+<mapper namespace="LogDataManageDAO">
+	<!-- 사용자 로그 insert -->
+	<update id="createUserLog" parameterType="map">
+		INSERT INTO mng_log_user_info(gid, user_id, user_nm, ogdp_dep_cd, ogdp_dep_nm, log_dt)
+		SELECT 
+			nextval('mng_log_user_info_gid_seq'), logon_id as user_id, user_name, pos_id as dept_id, dept_name || ' ' || section_name as dept_name, now() 
+		FROM organ_view
+		WHERE LOGON_ID=#{loginId};
+	</update>
+	
+ 	<!-- 메뉴 로그 insert -->
+	<update id="createMenuLog" parameterType="map">
+		INSERT INTO mng_log_menu_info
+					(menu_cd, 
+					 menu_nm, 
+					 lwrt_menu_cd, 
+					 lwrt_menu_nm, 
+					 user_id, 
+					 user_nm, 
+					 ogdp_dep_cd, 
+					 ogdp_dep_nm, 
+					 log_dt)
+		SELECT 
+			a.menu_cd,
+			a.menu_name,
+			a.sub_menu_code,
+			a.sub_menu_name,
+			b.logon_id as user_id, 
+			b.user_name, 
+			b.pos_id as dept_id, 
+			b.dept_name || ' ' || b.section_name as dept_name,
+			now()
+		FROM 
+			(
+			SELECT 
+				menu_cd,
+				coalesce((select menu_nm from mngr_menu_mng where lwrt_menu_cd = (select menu_cd from mngr_menu_mng where lwrt_menu_cd=#{menuCode}) ), menu_nm)  as menu_name,
+				 
+				lwrt_menu_cd as sub_menu_code, menu_nm as sub_menu_name
+			FROM  mngr_menu_mng 
+			WHERE lwrt_menu_cd = #{menuCode}
+			) a, organ_view b
+		WHERE b.logon_id = #{loginId};
+	</update>
+	
+	<!-- 로그 관리 날짜 가져오기 -->
+	<select id="selectLogDate" resultType="resultCamelMap">
+		select min(to_char(LOG_DT, 'YYYY-MM')) as min, max(to_char(LOG_DT, 'YYYY-MM')) as max from mng_log_menu_info;
+	</select>
+	
+	
+	<!-- 수정 진행 중 시작================================ -->
+	
+	
+	<!-- 선택기간 다운로드 수 통계 -->
+	<select id="selectLogDataDateTotal" parameterType="map" resultType="resultCamelMap">
+	SELECT sum(cnt) AS total
+	FROM 
+	    (
+		select a.lwrt_menu_cd as sub_menu_code, 
+		       b.menu_link as menu_link,
+			   a.lwrt_menu_nm as sub_menu_name,
+			   count(1) as cnt
+		from mng_log_menu_info a, mngr_menu_mng b
+		where 1=1
+	      	  AND to_char(a.log_dt, 'YYYYMM') = #{startDate}
+			  AND a.lwrt_menu_cd = b.lwrt_menu_cd
+		      AND a.lwrt_menu_cd in('MENU_00001', 'MENU_00004', 'MENU_00005', 'MENU_00050', 'MENU_00057', 'MENU_00051', 'MENU_00056', 'MENU_00052', 'MENU_00053', 'MENU_00058')
+		group by a.lwrt_menu_cd, a.lwrt_menu_nm, b.menu_link
+		order by cnt desc, a.lwrt_menu_cd, a.lwrt_menu_nm
+	    ) a
+	</select>
+	
+	<!-- 누적  다운로드 수 통계 -->
+	<select id="selectLogDataAllTotal" resultType="resultCamelMap">
+	SELECT sum(cnt) AS total
+	FROM 
+	    (
+		select a.lwrt_menu_cd as sub_menu_code, 
+		       b.menu_link as menu_link,
+			   a.lwrt_menu_nm as sub_menu_name,
+			   count(1) as cnt
+		from mng_log_menu_info a, mngr_menu_mng b
+		where 1=1
+			  AND a.lwrt_menu_cd = b.lwrt_menu_cd
+		      AND a.lwrt_menu_cd in('MENU_00001', 'MENU_00004', 'MENU_00005', 'MENU_00050', 'MENU_00057', 'MENU_00051', 'MENU_00056', 'MENU_00052', 'MENU_00053', 'MENU_00058')
+		group by a.lwrt_menu_cd, a.lwrt_menu_nm, b.menu_link
+		order by cnt desc, a.lwrt_menu_cd, a.lwrt_menu_nm
+	    ) a			
+	</select>
+	
+	<!-- 월별 통계 -->
+	<select id="selectLogDataMonthCnt" parameterType="map" resultType="resultCamelMap">
+	SELECT sum(cnt) AS total, substr(start_date, 5, 2) as start_date
+	FROM 
+	    (
+		select 
+			   count(1) as cnt, to_char(a.log_dt, 'yyyymm') as start_date
+		from mng_log_menu_info a, mngr_menu_mng b
+		where 1=1
+			  <![CDATA[
+			  and to_char(a.log_dt, 'YYYYMM') >= date_trunc('month', to_date(#{startDate}, 'yyyymmdd')::date - interval '6 month')::text
+			  and to_char(a.log_dt, 'YYYYMM') <= #{startDate}	
+			  ]]>
+			  and a.lwrt_menu_cd = b.lwrt_menu_cd
+		      and a.lwrt_menu_cd in('MENU_00001', 'MENU_00004', 'MENU_00005', 'MENU_00050', 'MENU_00057', 'MENU_00051', 'MENU_00056', 'MENU_00052', 'MENU_00053', 'MENU_00058')
+		group by a.lwrt_menu_cd, a.lwrt_menu_nm, b.menu_link, a.log_dt 
+		order by cnt desc, a.lwrt_menu_cd, a.lwrt_menu_nm
+	    ) a				
+	GROUP BY start_date
+	</select>
+
+	<select id="selectLogDataDayCnt" parameterType="map" resultType="resultCamelMap">
+	SELECT b.date as start_date, CASE WHEN a.cnt IS NULL THEN 0 ELSE a.cnt END AS total
+		FROM 
+		    (
+		    	 select 
+					case when EXTRACT(DOW FROM a.log_dt) = 0 then '일요일' 
+						 when EXTRACT(DOW FROM a.log_dt) = 1 then '월요일'
+					     when EXTRACT(DOW FROM a.log_dt) = 2 then '화요일'					     
+					     when EXTRACT(DOW FROM a.log_dt) = 3 then '수요일'
+					     when EXTRACT(DOW FROM a.log_dt) = 4 then '목요일'
+					     when EXTRACT(DOW FROM a.log_dt) = 5 then '금요일'
+			             else '토요일' end as start_date,
+					   count(1) as cnt
+				from mng_log_menu_info a, mngr_menu_mng b
+				where 1=1
+					<![CDATA[
+			          and to_char(a.log_dt, 'YYYYMM') <= #{startDate}	
+					  ]]>
+					  and a.lwrt_menu_cd = b.lwrt_menu_cd
+				      and a.lwrt_menu_cd in('MENU_00001', 'MENU_00004', 'MENU_00005', 'MENU_00050', 'MENU_00057', 'MENU_00051', 'MENU_00056', 'MENU_00052', 'MENU_00053', 'MENU_00058')
+				group by EXTRACT(DOW FROM a.log_dt)
+			 ) a right join 
+			     (select regexp_split_to_table('일요일,월요일,화요일,수요일,목요일,금요일,토요일', ',') as date, 0 as cnt)b
+				  on b.date = a.start_date	   
+		order by a.start_date = '토요일', a.start_date = '금요일', a.start_date = '목요일', a.start_date = '수요일', a.start_date = '화요일',  a.start_date = '월요일', a.start_date = '일요일'
+	</select>	
+	
+	<!-- 분야별 다운로드 데이터 조회 -->
+	<select id="selectLogDetailView" parameterType="map" resultType="resultCamelMap">
+		select a.lwrt_menu_cd as sub_menu_code, 
+               b.menu_link as menu_link,
+			   a.lwrt_menu_nm as sub_menu_name, 
+			   count(1) as cnt
+		 from mng_log_menu_info a, mngr_menu_mng b
+	    where 1=1
+	      AND to_char(a.log_dt, 'YYYYMM') = #{startDate}
+	      and a.lwrt_menu_cd = b.lwrt_menu_cd
+		  and a.lwrt_menu_cd in('MENU_00001', 'MENU_00004', 'MENU_00005', 'MENU_00050', 'MENU_00057', 'MENU_00051', 'MENU_00056', 'MENU_00052', 'MENU_00053', 'MENU_00058')
+		group by a.lwrt_menu_cd, a.lwrt_menu_nm, b.menu_link
+		order by cnt desc, a.lwrt_menu_cd, a.lwrt_menu_nm
+	</select>	
+	
+    <!-- 수정 진행 중 끝================================ -->
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<!-- 누적 방문자수 통계 -->
+	<select id="selectLogTotalVisitor" resultType="resultCamelMap">
+		select sum(cnt) as visitor
+		  from (
+				select count(DISTINCT user_id) as cnt 
+				  from mng_log_user_info 
+				 where 1=1
+			  group by user_id, to_char(LOG_DT, 'yyyymmdd')
+			   ) a	
+	
+	</select>
+	
+	<!-- 누적 방문횟수 통계 -->
+	<select id="selectLogTotalCnt" resultType="resultCamelMap">
+		select sum(cnt) as visitor_cnt
+		  from (
+				select count(user_id) as cnt 
+				  from mng_log_user_info 
+				 where 1=1
+			  group by user_id
+			   ) a	
+	
+	</select>
+	
+	<!-- 누적 페이지뷰 통계 -->
+	<select id="selectLogTotalView" resultType="resultCamelMap">
+		select count(1) page_view
+		  from mng_log_menu_info
+	
+	</select>
+	
+	<!-- 사용자 유저(월별) 로그 CNT -->
+	<select id="selectLogUserMonthCnt" parameterType="map" resultType="resultCamelMap">
+		select a.page_cnt, b.visitor, c.visitor_cnt, substr(a.start_date, 5, 2) as start_date
+	       from (
+		        select  to_char(log_dt, 'yyyymm') as start_date, count(1) as page_cnt
+				  from mng_log_menu_info a
+				 where 1=1
+				 <![CDATA[	
+		   		   and to_char(a.log_dt, 'YYYYMM') >= date_trunc('month', to_date(#{startDate}, 'yyyymmdd')::date - interval '6 month')::text
+		  		   and to_char(a.log_dt, 'YYYYMM') <= #{startDate}
+	  		     ]]>	
+		  		group by to_char(a.log_dt, 'yyyymm')
+				) a, 
+				(
+				select sum(cnt) as visitor, start_date
+				  from (
+						select count(DISTINCT user_id) as cnt , to_char(LOG_DT, 'yyyymm') as start_date
+						  from mng_log_user_info 
+						 where 1=1
+					  group by user_id, to_char(LOG_DT, 'yyyymmdd'), to_char(LOG_DT, 'yyyymm')
+					   ) a	
+				group by start_date	   
+				) b,
+				(
+				select sum(cnt) as visitor_cnt, start_date
+				  from (
+						select count(user_id) as cnt , to_char(LOG_DT, 'yyyymm') as start_date
+						  from mng_log_user_info 
+						 where 1=1
+					  group by user_id, to_char(LOG_DT, 'yyyymm')
+					   ) a	
+				   group by start_date	   
+				) c
+				where 1=1
+				  and a.start_date = b.start_date
+				  and b.start_date = c.start_date
+				group by a.start_date, b.visitor, c.visitor_cnt, a.page_cnt
+		
+		<!-- <![CDATA[	
+		select count(1) as cnt, to_char(start_date, 'yyyymm') as start_date
+         from (
+          select  
+				case when a.log_dt >= date_trunc('month', to_date('202109', 'yyyymmdd')::date)::date and a.log_dt <= date_trunc('month', to_date('202109', 'yyyymmdd')::date + interval '1 months')::date then date_trunc('month', to_date('202109', 'yyyymmdd')::date)::date 
+				     when a.log_dt >= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '1 month')::date and a.log_dt <= date_trunc('month', to_date('202109', 'yyyymmdd')::date)::date then date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '1 month')::date
+				     when a.log_dt >= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '2 month')::date and a.log_dt <= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '1 month')::date then date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '2 month')::date					     
+				     when a.log_dt >= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '3 month')::date and a.log_dt <= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '2 month')::date then date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '3 month')::date
+				     when a.log_dt >= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '4 month')::date and a.log_dt <= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '3 month')::date then date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '4 month')::date
+				     when a.log_dt >= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '5 month')::date and a.log_dt <= date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '4 month')::date then date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '5 month')::date
+				     else date_trunc('month', to_date('202109', 'yyyymmdd')::date - interval '6 month')::date end as start_date
+		from mng_log_menu_info a
+		where 1=1
+	    	and to_char(a.log_dt, 'YYYYMM') >= date_trunc('month', to_date(#{startDate}, 'yyyymmdd')::date - interval '6 month')::text
+	   		and to_char(a.log_dt, 'YYYYMM') <= #{startDate}
+   		]]>	
+		<if test="subMenuCode != '' and subMenuCode != null">   
+			and lwrt_menu_cd = #{subMenuCode}
+		</if>
+		<if test="serviceMenu != '' and serviceMenu != null">  	
+			and a.sub_menu_code in (select c.sub_menu_cd from mngr_menu_mng as c where (c.menu_cd =  #{serviceMenu} or c.sub_menu_cd = #{serviceMenu}))
+		</if>
+		<if test="searchServiceUserInfo != '' and searchServiceUserInfo != null">  	
+			and a.user_nm like #{searchServiceUserInfo}||'%'    
+		</if>	
+			and a.menu_cd not in('MENU_00003', 'MENU_00006', 'MENU_00007', 'MENU_00008', 'MENU_00009', 'MENU_00010', 'MENU_00011', 'MENU_00012', 'MENU_00013', 'MENU_00014', 'MENU_00015', 'MENU_00016', 'MENU_00017', 'MENU_00018', 'MENU_00019')
+		) a  
+		group by start_date
+	 -->
+	</select>
+	
+	<!-- 사용자 유저 로그(요일별) cnt 조회 -->
+	<select id="selectLogUserDayCnt" parameterType="map" resultType="resultCamelMap">
+		select a.page_cnt, b.visitor, c.visitor_cnt, 
+	 		a.start_date
+       from  (
+              select b.date as start_date, case when  a.page_cnt is null then 0 else a.page_cnt end as page_cnt
+			    from (
+		          	  select  
+						case when EXTRACT(DOW FROM a.log_dt) = 0 then '일요일' 
+						     when EXTRACT(DOW FROM a.log_dt) = 1 then '월요일'
+						     when EXTRACT(DOW FROM a.log_dt) = 2 then '화요일'					     
+						     when EXTRACT(DOW FROM a.log_dt) = 3 then '수요일'
+						     when EXTRACT(DOW FROM a.log_dt) = 4 then '목요일'
+						     when EXTRACT(DOW FROM a.log_dt) = 5 then '금요일'
+						     else '토요일' end as start_date,
+						     count(1) as page_cnt
+					    from mng_log_menu_info a
+					   where 1=1
+			     		 and to_char(a.log_dt, 'YYYYMM') = #{startDate}
+					   <if test="searchServiceUserInfo != '' and searchServiceUserInfo != null">  	
+						 and a.user_nm like #{searchServiceUserInfo}||'%'    
+					   </if>
+					    and a.lwrt_menu_cd != 'MENU_00002'
+						and a.menu_cd not in('MENU_00003', 'MENU_00006', 'MENU_00007', 'MENU_00008', 'MENU_00009', 'MENU_00010', 'MENU_00011', 'MENU_00012', 'MENU_00013', 'MENU_00014', 'MENU_00015', 'MENU_00016', 'MENU_00017', 'MENU_00018', 'MENU_00019')
+					     group by EXTRACT(DOW FROM a.log_dt)
+					  ) a right join (select regexp_split_to_table('일요일,월요일,화요일,수요일,목요일,금요일,토요일', ',') as date, 0 as cnt) b
+					  on b.date = a.start_date
+				) a ,
+				( 
+				 select b.date as start_date, case when  a.visitor is null then 0 else a.visitor end as visitor
+				   from (
+						select count(DISTINCT user_id) as visitor , 
+							   case when EXTRACT(DOW FROM log_dt) = 0 then '일요일' 
+							     when EXTRACT(DOW FROM log_dt) = 1 then '월요일'
+							     when EXTRACT(DOW FROM log_dt) = 2 then '화요일'					     
+							     when EXTRACT(DOW FROM log_dt) = 3 then '수요일'
+							     when EXTRACT(DOW FROM log_dt) = 4 then '목요일'
+							     when EXTRACT(DOW FROM log_dt) = 5 then '금요일'
+							     else '토요일' end as start_date
+						  from mng_log_user_info 
+						 where 1=1
+					       and to_char(log_dt, 'YYYYMM') = #{startDate}
+					<if test="searchServiceUserInfo != '' and searchServiceUserInfo != null">  	
+						and a.user_nm like #{searchServiceUserInfo}||'%'    
+					</if>	
+					  group by  EXTRACT(DOW FROM log_dt)
+					  ) a right join (select regexp_split_to_table('일요일,월요일,화요일,수요일,목요일,금요일,토요일', ',') as date, 0 as cnt) b
+					  on b.date = a.start_date
+				) b,
+				( 
+				select b.date as start_date, case when  a.visitor_cnt is null then 0 else a.visitor_cnt end as visitor_cnt
+				  from (
+						select count(user_id) as visitor_cnt , 
+						       case when EXTRACT(DOW FROM log_dt) = 0 then '일요일' 
+							     when EXTRACT(DOW FROM log_dt) = 1 then '월요일'
+							     when EXTRACT(DOW FROM log_dt) = 2 then '화요일'					     
+							     when EXTRACT(DOW FROM log_dt) = 3 then '수요일'
+							     when EXTRACT(DOW FROM log_dt) = 4 then '목요일'
+							     when EXTRACT(DOW FROM log_dt) = 5 then '금요일'
+							     else '토요일' end as start_date
+						  from mng_log_user_info 
+						 where 1=1
+					       and to_char(log_dt, 'YYYYMM') = #{startDate}
+					   <if test="searchServiceUserInfo != '' and searchServiceUserInfo != null">  	
+						   and user_nm like #{searchServiceUserInfo}||'%'    
+					   </if>	
+					  group by EXTRACT(DOW FROM log_dt)
+				  ) a right join (select regexp_split_to_table('일요일,월요일,화요일,수요일,목요일,금요일,토요일', ',') as date, 0 as cnt) b
+				  on b.date = a.start_date
+				) c
+			where 1=1
+			  and a.start_date = b.start_date 
+			  and b.start_date = c.start_date
+	   order by a.start_date = '토요일', a.start_date = '금요일', a.start_date = '목요일', a.start_date = '수요일', a.start_date = '화요일',  a.start_date = '월요일', a.start_date = '일요일'
+	</select>
+
+	<!-- 사용자 유저 로그(페이지 방문 현황) 데이터 조회 -->
+	<select id="selectLogUserPageView" parameterType="map" resultType="resultCamelMap">
+	
+		select a.lwrt_menu_cd as sub_menu_code, 
+               b.menu_link as menu_link,
+			   a.lwrt_menu_nm as sub_menu_name, 
+			   count(1) as cnt
+		 from mng_log_menu_info a, mngr_menu_mng b
+	    where 1=1
+	      and to_char(a.log_dt, 'YYYYMM') = #{startDate}
+	      and a.lwrt_menu_cd =b.lwrt_menu_cd
+	      and a.lwrt_menu_cd != 'MENU_00002'
+	    <if test="subMenuCode != '' and subMenuCode != null">   
+		  and lwrt_menu_cd = #{subMenuCode}
+		</if>
+		<if test="searchServiceUserInfo != '' and searchServiceUserInfo != null">  	
+		  and a.user_nm like #{searchServiceUserInfo}||'%'    
+		</if>  
+		  and a.menu_cd not in('MENU_00003', 'MENU_00006', 'MENU_00007', 'MENU_00008', 'MENU_00009', 'MENU_00010', 'MENU_00011', 'MENU_00012', 'MENU_00013', 'MENU_00014', 'MENU_00015', 'MENU_00016', 'MENU_00017', 'MENU_00018', 'MENU_00019')
+		group by a.lwrt_menu_cd, a.lwrt_menu_nm, b.menu_link
+		order by cnt desc, a.lwrt_menu_cd, a.lwrt_menu_nm
+	
+	</select>
+	
+</mapper>

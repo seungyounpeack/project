@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > Upload 데이터 관리 SQL
+ * @author 신용삼
+ * @since 2021. 10. 17.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2021.10.17.   	김부권          최초 생성
+
+ -->
+<mapper namespace="UserAuthSolutionManage">
+	
+	
+	<!-- 솔루션 유저 목록 조회하기 -->
+	<select id="selectSolutionUserList" parameterType="map" resultType="resultCamelMap">
+		select dept_name, section_name, pos_name, user_name, logon_id as user_id, b.role_name     
+		  from organ_view a,
+		       (select c.user_id, c.auth_cd , d.auth_nm as role_name from mng_user_auth c left join mng_auth d on c.auth_cd = d.auth_cd where c.use_yn = 'Y' ) b
+		   where a.logon_id = b.user_id
+		 <if test="userName != '' and userName != null">
+		  AND user_name like '%' || #{userName} || '%'
+		  </if>
+		 <if test="department != '' and department != null">
+		  AND dept_id = ${department}
+		  </if>
+		 <if test="positionId != '' and positionId != null">
+		  AND rank_id = ${positionId}
+		  </if>
+		  
+	</select>
+	
+	<!-- 유저 목록 조회하기 -->
+	<select id="selectUserList" parameterType="map" resultType="resultCamelMap">
+		select dept_name, section_name, pos_name, user_name, logon_id as user_id, b.use_yn,     
+		            case when b.use_yn = 'Y' then '솔루션' else b.role_name end role_name     
+		  from organ_view a
+		   left join
+		       (select c.user_id, c.auth_cd , d.auth_nm as role_name, c.use_yn from mng_user_auth c left join mng_auth d on c.auth_cd = d.auth_cd ) b
+		   on a.logon_id = b.user_id
+		 where 1=1
+		 <if test="userName != '' and userName != null">
+		  AND user_name like '%' || #{userName} || '%'
+		  </if>
+		 <if test="department != '' and department != null">
+		  AND dept_id = ${department}
+		  </if>
+		 <if test="positionId != '' and positionId != null">
+		  AND rank_id = ${positionId}
+		  </if>
+		  order by use_yn = 'N' asc;
+	</select>
+	
+
+	<!-- 솔루션 권한 부여하기 -->
+	<update id="selectInsertSolutionAuth" parameterType="map">
+		  update mng_user_auth 
+		    set use_yn='Y'
+		  where 1=1
+		    and user_id = #{userId} 
+	</update>
+	
+	<!-- 솔루션 권한 해제하기 -->
+	<update id="selectDeleteSolutionAuth" parameterType="map">
+		  update mng_user_auth 
+		    set use_yn='N'
+		  where 1=1
+		    and user_id = #{userId} 
+	</update>
+	
+	<!-- solution user 권한 cnt 가져오기 -->
+	<select id="selectSolutionUserCnt" parameterType="map" resultType="int">
+		select count(1) 
+		   from mng_user_auth
+		  where 1=1
+		    and use_yn = 'Y' 
+		    ;
+		 <!--   AND R.auth_cd <![CDATA[<>]]> 'ROLE_00003' --> 
+	</select>
+	
+	
+</mapper>

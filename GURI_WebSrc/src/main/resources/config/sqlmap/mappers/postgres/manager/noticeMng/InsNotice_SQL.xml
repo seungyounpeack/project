@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 공지사항 등록
+ * @author 권기완
+ * @since 2022. 06. 15.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2022.06.15.   	권기완          최초 생성
+ -->
+ <mapper namespace="InsNoticeDAO">
+ <!-- 공지사항 고유번호 가져오기 -->
+ 	<select id="selectPk" resultType="int">
+ 	select 
+		case when max(bsct_sn)+1 is null then 1
+		when max(bsct_sn)+1 = 0 then 1
+		else  max(bsct_sn)+1 end as pk_val
+ 	 from mngr_bsct_list
+ 	</select>
+ 	<!-- 공지사항 등록 -->
+ 	<insert id="saveNotice">
+ 		insert into mngr_bsct_list(
+ 			bsct_se,
+ 			bsct_sn,
+ 			del_yn,
+ 			inq_cnt,
+ 			bsct_sj,
+ 			bsct_cn,
+ 			rgtr_id,
+ 			reg_dt
+ 		)VALUES(
+ 			${bsctSe},
+ 			#{pkVal},
+ 			'N',
+ 			0,
+ 			#{title},
+ 			#{contents},
+ 			#{loginId},
+ 			now()
+ 		)
+ 	</insert>
+ 	<insert id="noticeFileUp">
+ 		insert into mngr_bsct_file_dtl(
+ 			bsct_sn,
+ 			atch_file_id,
+ 			orig_file_nm,
+ 			strg_file_nm,
+ 			file_strg_path,
+ 			file_extn,
+ 			file_sz,
+ 			reg_dt,
+ 			rgtr_id
+ 		)VALUES(
+ 			#{bsctSn},
+ 			(select file_id from public.mngr_sqe_info where 1=1 and tbl_nm = 'mngr_bsct_file_dtl'),
+ 			#{orignlFileNm},
+ 			#{streFileNm},
+ 			#{fileStreCours},
+ 			#{fileExtsn},
+ 			#{fileMg},
+ 			now(),
+ 			#{creatId}
+ 		)
+ 	</insert>
+ </mapper>

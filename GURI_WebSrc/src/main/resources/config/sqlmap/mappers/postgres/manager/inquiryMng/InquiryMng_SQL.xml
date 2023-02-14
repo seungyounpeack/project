@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 문의사항 관리
+ * @author 권기완
+ * @since 2022. 06. 15.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2022.06.15.   	권기완          최초 생성
+ -->
+ <mapper namespace="InquiryMngDAO">
+ 
+ 	<!-- 문의사항 리스트 조회하기 -->
+	<select id="selectInquiryList" parameterType="map" resultType="resultCamelMap">
+			with a as (
+						  select
+								a.bbs_sn as inquiry_pk ,
+								c.atch_file_id as file_pk,
+								a.bsct_sj as title ,
+								a.bsct_cn as contents ,
+								a.user_nm as reg_id ,
+								to_char(a.reg_dt, 'YYYY-MM-DD') as reg_date ,
+								(row_number() over(
+								order by a.reg_dt asc)) as row_num ,
+								b.ans_cn
+							from
+								mngr_inqy_bbs_info a
+								left join mngr_bsct_file_dtl c
+								 ON c.bsct_sn = a.bbs_sn
+								 left join  mngr_inqy_bbs_ans_info b
+								 on b.bbs_sn = a.bbs_sn
+								 and b.del_yn !='Y'
+	    					WHERE 1=1
+	    	<choose>
+					<when test="gb == 'searchAll'">
+						<if test="searchForm != '' and searchForm != null ">
+						  		AND (a.user_nm LIKE '%'||#{searchForm}||'%'OR a.bsct_cn LIKE '%'||#{searchForm}||'%' OR a.bsct_sj LIKE '%'||#{searchForm}||'%')
+						</if>
+					</when>
+					<otherwise>
+					  	<if test="gb =='postTitle'">
+					  		AND a.bsct_sj LIKE '%'||#{searchForm}||'%'
+					  	</if>
+					  	<if test="gb =='postCont'">
+					  		AND a.bsct_cn LIKE '%'||#{searchForm}||'%'
+					  	</if>
+					  	<if test="gb =='postName'">
+					  		AND a.user_nm LIKE '%'||#{searchForm}||'%'
+					  	</if>
+					</otherwise>		 
+		</choose>
+		    order by a.reg_dt desc
+		   )
+	   select * 
+		 from a , (select count(1) as cnt from a) as b
+	    LIMIT ${nowPageCnt}
+		 OFFSET ${nextNo}
+	</select>
+	<!-- 문의글 삭제 -->
+	<delete id="deleteInquiryList">
+	    DELETE 	FROM mngr_inqy_bbs_info
+	 	WHERE	bbs_sn IN
+    	<foreach item="item" index="index" collection="chkArr" open="(" close=")" separator=",">
+            #{item}::integer
+    	</foreach>
+	</delete>
+	
+ </mapper>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 공통코드 관리 SQL
+ * @author 김부권
+ * @since 2021. 09. 13.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2019.07.08.   	신용삼          최초 생성
+
+ -->
+<mapper namespace="CommonCodeMng">
+	<!-- 공통코드 수정 조건절 -->
+	<sql id="updateCdLstWHERE">
+		<if test='mngrGrpCd != null and mngrGrpCd != ""'>
+			AND MNGR_GRP_CD = #{mngrGrpCd}
+		</if>
+		<if test='mngrGrpUseYn != null and mngrGrpUseYn != ""'>
+	     	AND MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+		</if>
+	</sql>
+	
+	<!-- 공통코드 수정 set 변수 -->
+	<sql id="updateCdLstSET">
+		<if test='mngrGrpCd != null and mngrGrpCd != ""'>
+			  MNGR_GRP_CD = #{mngrGrpCd}
+			, MNGR_GRP_CD = #{mngrGrpCd}
+			, MNGR_GRP_CD = #{mngrGrpCd}
+			
+		</if>
+		<if test='mngrGrpUseYn != null and mngrGrpUseYn != ""'>
+	     	   MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+	     	 , MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+	     	 , MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+		</if>
+	</sql>
+	
+	
+
+	
+ 	
+	
+	<!-- 상위 공통코드 목록 조회하기 -->
+	<select id="selectTopCodeList" resultType="resultCamelMap">
+		SELECT
+		       cd_id     AS CODE_ID,
+		       cd_nm  AS CODE_NAME,
+		       grp_cd_id AS group_code,
+		       cd_desc AS group_name,
+		       cd_desc AS code_desc,
+		       cd_sqe AS code_order, 
+		       use_yn AS use_yn
+		  FROM mngr_code
+		 WHERE grp_cd_id = 'ROOT';
+	</select>
+	
+	<!-- 하위 공통코드 목록 조회하기 -->
+	<select id="selectSubCodeList" parameterType="map" resultType="resultCamelMap">
+		SELECT
+		       cd_id     AS SUB_CODE_ID,
+		       cd_nm  AS SUB_CODE_NAME,
+		       grp_cd_id AS group_code,
+		       cd_desc AS SUB_group_name,
+		       cd_desc AS SUB_code_desc,
+		       cd_sqe AS SUB_code_order, 
+		       use_yn AS SUB_USE_YN
+		  FROM mngr_code
+		 WHERE grp_cd_id = #{codeId};
+	</select>
+	
+	<select id="selectGroupCodeCnt" parameterType="map" resultType="resultCamelMap">
+		SELECT *
+		  FROM mngr_code
+		 WHERE 1=1
+		   AND grp_cd_id = #{groupCode}
+	</select>
+	
+	<select id="selectNextTopCode" resultType="resultCamelMap">
+		SELECT CASE WHEN max(REPLACE(cd_id, 'GRP', '')) IS NULL THEN 'GRP0001' 
+		       ELSE 'GRP' || lpad((max(REPLACE(cd_id, 'GRP', '')::int)+1)::text, 4, '0')  END AS next_code 
+		  FROM mngr_code
+		 WHERE grp_cd_id = 'ROOT';
+	</select>
+	
+	<select id="selectCodeSqe" parameterType="map" resultType="resultCamelMap">
+		SELECT CASE WHEN max(cd_sqe) IS NULL THEN 1 
+		        ELSE max(cd_sqe)+1 END AS cd_sqe
+		  FROM mngr_code
+		 WHERE grp_cd_id = #{groupCode};
+	</select>
+	
+	<!-- 공통 상위코드 정보 저장하기 -->
+	<insert id="insertTopCodeInfo" parameterType="map">
+		insert into mngr_code(grp_cd_id, cd_id, cd_nm, cd_desc, cd_sqe, lwrt_cd_hav_yn, use_yn, reg_dt, rgtr_id, mdfcn_dt, mdfr_id)
+		values(  'ROOT', 
+		       #{codeId}, #{codeName}, #{codeDesc}, #{codeOrder}::int, 'N', #{useYn}, now(), #{loginId}, null, null );
+				
+	</insert>
+	
+	<!-- 공통 하위코드 정보 저장하기 -->
+	<insert id="insertSubCodeInfo" parameterType="map">
+		insert into mngr_code(grp_cd_id, cd_id, cd_nm, cd_desc, cd_sqe, lwrt_cd_hav_yn, use_yn, reg_dt, rgtr_id, mdfcn_dt, mdfr_id)
+		values( #{groupCode},
+		        #{subCodeId}, 
+				#{subCodeName}, #{subCodeDesc}, #{subCodeOrder}::int, 'N', #{subUseYn}, now(), #{loginId}, null, null );
+			
+	</insert>
+	
+	<!-- 공통 상위코드 정보 수정하기 -->
+	<update id="updateTopCodeInfo" parameterType="map">
+		UPDATE mngr_code
+		   SET 
+		   <if test="codeName != '' and codeName != null">
+		   	   cd_nm		= #{codeName},
+	   	   </if>
+	   	   <if test="codeDesc != '' and codeDesc != null">
+		   	   cd_desc		= #{codeDesc},
+	   	   </if>
+		   	   mdfcn_dt		= now(),
+		   	   mdfr_id			= #{loginId},
+		   	<if test="lwrtCdHavCnt > 0">
+		   	   lwrt_cd_hav_yn = 'Y',
+		   	</if>
+		   	   use_yn			= #{useYn}		   	   
+		 WHERE cd_id	= #{codeId}
+	
+	</update>
+	<!-- 공통 하위코드 정보 수정하기 -->
+	<update id="updateSubCodeInfo" parameterType="map">
+		UPDATE mngr_code
+		   SET 
+		   	   cd_nm		= #{subCodeName},
+		   	   cd_desc		= #{subCodeDesc},
+		   	   mdfcn_dt		= now(),
+		   	   mdfr_id			= #{loginId},
+		   	   use_yn			= #{subUseYn}
+		 WHERE cd_id	= #{subCodeId}
+	
+	</update>
+	
+	
+	<!-- 공통상위코드 정보 삭제하기 -->
+	<delete id="deleteTopCodeInfo" parameterType="map">
+		
+		DELETE FROM mngr_code
+		 WHERE cd_id	= #{codeId}
+		 
+	</delete>
+	
+	<!-- 공통하위코드 정보 삭제하기 -->
+	<delete id="deleteSubCodeInfo" parameterType="map">
+		
+		DELETE FROM mngr_code
+		 WHERE cd_id	= #{codeId}
+		 
+	</delete>
+	
+
+</mapper>

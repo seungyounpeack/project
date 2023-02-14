@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 메뉴 관리 SQL
+ * @author 김부권
+ * @since 2022. 06. 17.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *     수정일			     수정자			                수정내용
+ *  ============    ==========		==========================
+ *  2022. 06. 17.      김부권                                최초 생성
+
+ -->
+<mapper namespace="MenuMng">
+	<!-- 공통코드 수정 조건절 -->
+	<sql id="updateCdLstWHERE">
+		<if test='mngrGrpCd != null and mngrGrpCd != ""'>
+			AND MNGR_GRP_CD = #{mngrGrpCd}
+		</if>
+		<if test='mngrGrpUseYn != null and mngrGrpUseYn != ""'>
+	     	AND MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+		</if>
+	</sql>
+	
+	<!-- 공통코드 수정 set 변수 -->
+	<sql id="updateCdLstSET">
+		<if test='mngrGrpCd != null and mngrGrpCd != ""'>
+			  MNGR_GRP_CD = #{mngrGrpCd}
+			, MNGR_GRP_CD = #{mngrGrpCd}
+			, MNGR_GRP_CD = #{mngrGrpCd}
+			
+		</if>
+		<if test='mngrGrpUseYn != null and mngrGrpUseYn != ""'>
+	     	   MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+	     	 , MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+	     	 , MNGR_GRP_USE_YN = #{mngrGrpUseYn}
+		</if>
+	</sql>
+	
+	<!-- 관리자 메뉴 가져오기 -->
+	<select id="selectAuthMenuList" parameterType="map" resultType="resultCamelMap">
+	  WITH menu AS (
+	                SELECT lgc_menu_cd AS parent_code, menu_cd, menu_nm, menu_dp, indct_orr, menu_url
+	                  FROM mngr_menu_mng
+	                 WHERE 1=1
+	                   AND use_yn = 'Y'
+	                   AND indct_yn = 'Y'
+	                   AND lgc_menu_cd IN ( 
+	                                        SELECT menu_cd
+	                                          FROM public.mngr_role_menu
+	                                         WHERE 1=1
+	                                           AND auth_se_cd = (  SELECT role_code
+	                                                                 FROM mngr_user_role
+	                                                                WHERE 1=1
+	                                                                  AND user_id = #{loginId} ) 
+	                                        )
+                   <choose>
+                   	   <when test='menuTp == "A"'>
+                   	   		AND menu_tp = 'A'
+                   	   </when>
+                   	   <otherwise>
+                   	   		AND menu_tp != 'A'
+                   	   </otherwise>
+                   </choose>
+	               ORDER BY menu_dp, indct_orr
+				)
+				SELECT ROW_NUMBER() OVER ()  AS NO, *
+				  FROM menu
+				UNION ALL
+				SELECT ROW_NUMBER() OVER (ORDER BY menu_cd) AS NO, lgc_menu_cd AS parent_code, menu_cd, menu_nm, menu_dp, indct_orr, menu_url
+				  FROM mngr_menu_mng 
+				 WHERE 1=1
+				   AND use_yn = 'Y'
+				   AND indct_yn = 'Y'
+				   AND ( lgc_menu_cd IN ( SELECT menu_cd FROM menu )
+				        OR lgc_menu_cd IN ( SELECT menu_cd FROM mngr_menu_mng WHERE lgc_menu_cd IN ( SELECT menu_cd FROM menu ) )
+				        )
+				ORDER BY NO, menu_dp, indct_orr;
+	</select>
+	
+	<select id="selectMenuNext" parameterType="map" resultType="resultCamelMap">
+		SELECT 
+	            CASE WHEN MAX(menu_cd) IS NULL THEN 'MENU_00001' 
+	                 ELSE 'MENU_' || lpad(MAX(CAST(split_part(menu_cd, '_', 2) AS  integer)+1)::text, 5, '0') END AS menu_code,
+	            (
+	            SELECT CASE WHEN max(indct_orr::int) IS NULL THEN 1 ELSE (max(indct_orr::int)+1) END AS view_order
+				  FROM mngr_menu_mng
+				 WHERE 1=1
+				 <choose>
+				 	<when test="parentCode == 'MENU_00000'">
+				 		and menu_dp = 1
+				 	</when>
+				 	<otherwise>
+				 		and menu_dp = (SELECT  DISTINCT menu_dp FROM mngr_menu_mng WHERE 1=1 AND lgc_menu_cd = #{parentCode})
+				 	</otherwise>
+				 </choose>
+				  and lgc_menu_cd = #{parentCode}  
+	            ) as menu_order  
+	  	   FROM mngr_menu_mng
+	</select>
+	
+	<select id="selectMenuDp" parameterType="map" resultType="resultCamelMap">
+		SELECT menu_dp+1 as menu_dp
+		  FROM mngr_menu_mng
+		 WHERE 1=1
+		   AND menu_cd = #{parentCode}
+		limit 1
+	</select>
+	
+	
+	<!-- 메뉴 목록 조회하기 -->
+	<select id="selectMenuList" resultType="resultCamelMap">
+		WITH RECURSIVE RC AS (
+		            SELECT Cast(M.indct_orr As integer)  AS HIERARCHY,
+		                   M.menu_cd as menu_code, 
+		                   M.lgc_menu_cd as parent_code, 
+		                   M.menu_nm as menu_name, 
+		                   M.menu_url, 
+		                   M.menu_tp as menu_type, 
+		                   M.menu_dp as menu_depth, 
+		                   M.indct_yn as display_yn, 
+		                   M.use_yn as use_yn,
+		                   M.indct_orr as display_seq
+		              FROM mngr_menu_mng M
+		             WHERE 1=1
+		               AND M.lgc_menu_cd = 'MENU_00000'
+		            UNION ALL
+		            SELECT Cast(M.indct_orr As integer)  AS HIERARCHY,
+		                   M.menu_cd as menu_code, 
+		                   M.lgc_menu_cd as parent_code, 
+		                   M.menu_nm as menu_name, 
+		                   M.menu_url, 
+		                   M.menu_tp as menu_type, 
+		                   M.menu_dp as menu_depth, 
+		                   M.indct_yn as display_yn, 
+		                   M.use_yn as use_yn,
+		                   M.indct_orr as display_seq
+		              FROM mngr_menu_mng M --JOIN RC ON RC.parent_code = M.lgc_menu_cd
+		             WHERE 1=1
+		             AND M.lgc_menu_cd != 'MENU_00000'
+		        )
+		        SELECT 'MENU_00000' as menu_code, 
+		               '' as parent_code, 
+		               'Root' as menu_name, 
+		               '' as menu_url,
+		               'M' as menu_type,
+		               0 as menu_depth,
+		               'N' as display_yn,
+		               'Y' as use_yn,
+		               '0' as menu_order,
+		               '' as parent_name
+		        UNION ALL
+		        SELECT *
+		          FROM (
+		                SELECT menu_code, 
+		                       parent_code, 
+		                       case when menu_name is null then '' else menu_name end as menu_name, 
+		                       case when menu_url is null then '' else menu_url end as menu_url, 
+		                       case when menu_type is null then '' else menu_type end as menu_type, 
+		                       case when menu_depth is null then 99 else menu_depth end as menu_depth, 
+		                       display_yn, 
+		                       use_yn, 
+		                       display_seq,
+		                       CASE parent_code 
+		                            WHEN 'MENU_00000' THEN 'Root' 
+		                            ELSE (SELECT MAX(menu_nm) as menu_name FROM mngr_menu_mng Where menu_cd = M.parent_code)
+		                       END as parent_name   
+		                  FROM RC M
+		                ORDER BY menu_depth, HIERARCHY
+		        ) A   
+		<!-- WITH menu_list AS (
+            SELECT
+               menu_cd as menu_code,
+               lgc_menu_cd as parent_code,
+               menu_nm as menu_name,
+               menu_url as menu_link,
+               menu_tp as menu_type,
+               menu_dp as menu_depth,
+               use_yn as display_yn,
+               use_yn,
+               CASE lgc_menu_cd 
+                  WHEN 'MENU_00000' THEN'Root' 
+                  ELSE (
+                    SELECT MAX(menu_nm) 
+                          FROM mngr_menu_mng 
+                     WHERE menu_cd = M.lgc_menu_cd
+                   ) 
+               END as parent_name 
+              FROM mngr_menu_mng M 
+            ORDER BY lgc_menu_cd
+        ),
+        role_menu_list AS (
+        SELECT menu_cd as menu_code
+          FROM mng_auth_menu
+         WHERE auth_cd = 'USERROLE_000002'
+        )
+        SELECT menu_code, menu_name, parent_code, menu_link, menu_type, 
+               CASE menu_type WHEN 'M' THEN '메뉴' WHEN 'S' THEN '서비스' END as menu_type_name,
+               (SELECT CASE WHEN COUNT(*) = 0 THEN 'N' ELSE 'Y' END 
+                  FROM role_menu_list RL 
+                 WHERE RL.menu_code = M.menu_code) as menu_selected
+          FROM menu_list M   -->
+		  
+	</select>
+	
+	
+	<!-- 상위메뉴 정보 저장하기 -->
+	<insert id="insertTopMenuInfo" parameterType="map">
+		insert into mngr_menu_mng(lgc_menu_cd, menu_cd, menu_nm, menu_url, use_yn, menu_tp, menu_dp, indct_yn, icon_clss, indct_orr, reg_dt, rgtr_id)
+		values(
+				#{parentCode}, 
+  				#{menuCode},#{menuName},#{menuUrl}, #{useYn},'M', #{menuDp}::int, #{visibleYn}, #{imgClass}, #{menuOrder}, now(), #{loginId}  );
+				
+	</insert>
+	
+	<!-- 공통 하위코드 정보 저장하기 -->
+	<insert id="insertSubMenuInfo" parameterType="map">
+		insert into mngr_menu_mng(lgc_menu_cd, menu_cd, menu_nm, menu_url, use_yn, menu_tp, menu_dp, indct_yn, icon_clss, indct_orr, reg_dt, rgtr_id)
+		values( #{parentCode}, 
+  				#{menuCode},
+  				#{menuName},#{menuUrl}, #{useYn}, 'M', #{menuDp}::int, #{visibleYn}, #{imgClass}, #{menuOrder}, now(), #{loginId}  );
+			
+	</insert>
+	
+	
+	<!--  상위메뉴 정보 수정하기 -->
+	<update id="updateTopMenuInfo" parameterType="map">
+	
+		UPDATE mngr_menu_mng
+		   SET 
+		   	   menu_nm		= #{menuName},
+		   	   menu_url		= #{menuUrl},
+		   	   indct_orr = #{menuOrder}::int,
+		   	   use_yn = #{useYn},
+		   	   indct_yn = #{visibleYn},
+		   	   mdfcn_dt		= now(),
+		   	   mdfr_id			= #{loginId}
+		 WHERE lgc_menu_cd	= #{parentCode}
+		   AND menu_cd = #{menuCode}
+		   AND menu_dp = #{menuDp}::int
+	
+	</update>
+	<!--  하위메뉴 정보 수정하기 -->
+	<update id="updateSubMenuInfo" parameterType="map">
+		UPDATE mngr_menu_mng
+		   SET 
+		   	   menu_nm		= #{menuName},
+		   	   menu_url		= #{menuUrl},
+		   	   indct_orr = #{menuOrder}::int,
+		   	   mdfcn_dt		= now(),
+		   	   mdfr_id			= #{loginId},
+		   	   indct_yn = #{visibleYn},
+		   	   use_yn			= #{useYn}		   	   
+		 WHERE lgc_menu_cd	= #{parentCode}
+		   AND menu_cd = #{menuCode}
+		   AND menu_dp = #{menuDp}::int
+	
+	</update>
+	
+	
+	<!-- 상위메뉴 정보 삭제하기 -->
+	<delete id="deleteTopMenuInfo" parameterType="map">
+		
+		DELETE FROM mngr_menu_mng
+		 WHERE lgcMenuCode	= #{lgcMenuCode}
+		 
+	</delete>
+	
+	<!-- 하위메뉴 정보 삭제하기 -->
+	<delete id="deleteSubMenuInfo" parameterType="map">
+		
+		DELETE FROM mngr_menu_mng
+		 WHERE lgcMenuCode	= #{lgcMenuCode}
+		   AND menu_cd = #{menuCode}
+		 
+	</delete>
+	
+
+</mapper>

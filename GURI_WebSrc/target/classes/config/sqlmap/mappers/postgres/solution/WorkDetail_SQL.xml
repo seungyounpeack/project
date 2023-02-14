@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+* 관리자 > 공지사항 관리 
+* @author 백승연 
+* @since 2022. 10. 26.
+* @version 1.0 
+* @see 
+* 
+* <pre> 
+* << 개정이력(Modification Information) >> 
+* 
+* 수정일 			수정자 		수정내용 
+* ========== 	========== 	======================================== 
+* 2022.06.15. 	백승연 		최초 생성 -->
+<mapper namespace="WorkDetailDAO">
+	<!-- 상세 조회 -->
+	<select id="selectWorkList" parameterType="map" resultType="resultCamelMap">
+		SELECT
+			  c.cd_nm as kategories
+			, a.work_title as title
+			, a.work_info as info
+			, a.work_contents as contents
+			, case when a.work_fee = 0 then '무료' else a.work_fee || '원' end as fee
+			, case when a.work_recommand is null then 0 else a.work_recommand end as recommend
+			, case when a.work_view is null then 0 else a.work_view end as view
+			, case when a.work_down is null then 0 else a.work_down end as down
+			, a.work_img_yn as imgs
+			, a.work_review as review
+			, a.work_crt_user as c_user
+			, to_char(a.work_crt_date,'YYYY-MM-DD') as date
+			, a.work_mod_user as m_user
+			, a.work_mod_date as update
+		FROM eyet_work a
+			left join dsu_cmm_code c
+				ON c.cd_id = a.work_cd <!--a.work_cd의 코드와   c.cd_id의 카테고리가 조인 -->
+		WHERE 1=1
+			and a.work_num = #{workPk}
+	</select>
+	<!-- 리뷰 리스트 -->
+	<select id="selectReviewList" parameterType="map" resultType="resultCamelMap">
+		  with a as (select 
+			  review_snu as review_pk
+			, review_contents as review_contents
+			, review_score as star
+			, work_crt_user as review_user
+			, to_char(work_crt_date,'YYYY-MM-DD') as review_date
+		 from eyet_work_review
+		where 1=1
+		  and work_num = #{workPk}
+		  and review_use_yn <![CDATA[<>]]> 'N'
+		  order by review_snu desc
+		)
+		 	select *
+ 		      from a ,(select count(1) as cnt from a) as b
+		 <choose>
+		 	<when test="nowPageCnt != null and nowPageCnt != '' ">
+			    LIMIT ${nowPageCnt}
+			</when>	 
+			<otherwise>
+				LIMIT 4
+			</otherwise>
+		 </choose>
+		 <choose>
+		 	<when test="nextNo != null and nextNo != '' ">
+				 OFFSET ${nextNo}
+			</when>	 
+			<otherwise>
+				OFFSET 0
+			</otherwise>
+		 </choose>
+	</select>
+	
+	<!-- 조회수 증가  -->
+	<update id="updateView"  parameterType="map">
+		update 
+			eyet_work 
+		   set 
+			work_view = 
+				(select case when work_view is null then 0 else work_view end as view 
+				   from eyet_work 
+				  where 1=1 
+					and work_num = #{workPk}) + 1 
+		  where 1=1
+		    and work_num = #{workPk};
+	</update>
+	
+	<!-- 추천 증가 -->
+	<update id="updateCommend" parameterType="map">
+		update 
+			eyet_work 
+		set 
+			work_recommand = 
+		(select case when work_recommand is null then 0 else work_recommand end as work_recommand 
+	 	   from eyet_work 
+		  where 1=1 
+		    and work_num = #{workPk}) + 1 
+		where 
+			work_num = #{workPk}
+	</update>
+	
+	<!-- 파일 정보 가져오기 -->
+	<select id="selectFileInfo" parameterType="map" resultType="resultCamelMap">
+		select 
+			  file_ori_name
+			, file_new_name
+			, file_path
+			, file_extn_name
+		 from eyet_work_file
+		WHERE 1=1
+		  and work_num = #{workPk}
+		  and file_id = #{fileId}
+			<!-- and sort = 1 -->
+	</select>
+	
+	<!-- 리뷰 등록 -->
+	<insert id="workReviewInsert" parameterType="map">
+		insert into eyet_work_review  
+			(
+				work_num,
+				review_snu,
+				review_contents,
+				review_score,
+				review_use_yn,
+				work_crt_user,
+				work_crt_date
+			)values
+			(
+				#{workPk},
+				(select case when max(review_snu) = 0 then 1 else max(review_snu)+1 end as max from eyet_work_review),
+				#{review},
+				5,
+				'Y',
+				#{loginId},
+				now()
+				
+			)
+	</insert>
+	
+	<!-- 리뷰 등록 -->
+	<update id="workReviewDelete" parameterType="map">
+		update 
+			eyet_work_review 
+		   set review_use_yn = 'N'
+		 where 1=1
+		   and work_num = #{workPk}
+		   and review_snu = #{reviewPk}
+	</update>
+</mapper>

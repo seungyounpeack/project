@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+	<Appenders>
+		<Console name="logConsole" target="SYSTEM_OUT">
+			<PatternLayout pattern="%d %5p [%c{3}] %m%n" />
+		</Console>
+		
+		<RollingFile name="logFile">
+	  		<FileName>D:/DAS-Platform/log/uijeongbu.log</FileName>
+	  		<FilePattern>D:/DAS-Platform/log/zip/%d{yyyy-MM-dd}.log.zip</FilePattern>
+	  		<PatternLayout>
+	    		<!-- <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger{36} - %msg%n</Pattern> -->
+	    		<Pattern>%d %5p [%c{3}] %m%n</Pattern>
+	  		</PatternLayout>
+	  		<Policies>
+	    		<TimeBasedTriggeringPolicy interval="1" modulate="true" />
+	  		</Policies>
+	  		<DefaultRolloverStrategy max="30" />
+	</RollingFile>
+        
+	</Appenders>
+	
+	<Loggers>
+		
+		<Logger name="java.sql" level="INFO" additivity="false">
+			<AppenderRef ref="logFile" />
+		</Logger>
+		<Logger name="kr.go.osan" level="DEBUG" additivity="false">
+			<AppenderRef ref="logFile" />
+		</Logger>
+		<Logger name="jdbc.sqltiming" level="INFO" additivity="false">
+			<AppenderRef ref="logFile" />
+		</Logger>
+		<Logger name="org.springframework" level="INFO" additivity="false">
+			<AppenderRef ref="logFile" />
+		</Logger>
+		
+		<Root level="ERROR">
+			<AppenderRef ref="logFile" />
+		</Root>
+	</Loggers>
+</Configuration>

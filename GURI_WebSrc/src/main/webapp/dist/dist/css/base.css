@@ -1,0 +1,43 @@
+@charset "utf-8";
+
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video { margin:0; padding:0; border:0;line-height:100%;outline:0;vertical-align:top;box-sizing:border-box; font-size:inherit;}
+/* HTML5 display-role reset for older browsers */
+article,aside,details,figcaption,figure,footer,header,hgroup,main,menu,nav,section,summary { display: block;}
+audio,canvas,progress,video {display: inline-block;vertical-align: top;}
+audio:not([controls]) {display: none;height: 0}
+[hidden],template {display: none}
+ol, ul { list-style: none; }
+blockquote, q { quotes: none; }
+blockquote:before, blockquote:after, q:before, q:after { content: ''; content: none; }
+table { border-spacing: 0; }
+a {color:inherit;}
+a, a:hover, a:active, a:focus {color: white;text-decoration: none !important;}
+abbr[title] {border-bottom: 1px dotted}
+em, address { font-style: normal;}
+b,strong,th,dt {font-weight: 500}
+small {font-size: 80%}
+img {vertical-align: top;}
+hr,legend,caption {margin: 0; padding: 0; width: 100%; height: 0; line-height: 0; font-size: 0; color: transparent;border: none; overflow: hidden;}
+pre {overflow: auto}
+button { cursor: pointer;overflow: visible; border:0;font-family: 'Noto Sans KR' !important;font-weight:500;outline-style:none}
+button,input,optgroup,select,textarea {color: inherit;margin: 0;}
+button,select {text-transform: none}
+button,html input[type="button"],input[type="reset"],input[type="submit"] {-webkit-appearance: button;cursor: pointer}
+button[disabled],html input[disabled] {cursor: default}
+input {line-height: normal;outline-style:none;border:0 none !important}
+input[type="checkbox"],input[type="radio"] {box-sizing: border-box; padding: 0;border:0 none !important;margin:0;box-shadow:none}
+input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button {height: auto}
+input[type="search"] {-webkit-appearance: textfield;box-sizing: content-box;}
+input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration {-webkit-appearance: none}
+button::-moz-focus-inner,input::-moz-focus-inner {border: 0;padding: 0;}
+button:active>*, button:focus>* { position: relative; top: 0px; left: 0px}
+table {border-collapse: collapse;border-spacing: 0;width:100%}
+caption,legend{display:none}
+html, body {font-family: 'Noto Sans KR','돋움',Dotum,'굴림',Gulim,Helvetica,sans-serif,verdana;background-color:#2a2a2a;color:#fff;font-size:16px;line-height:100%; font-weight:300;letter-spacing:-0.05em;}
+* {-webkit-box-sizing: border-box;-moz-box-sizing: border-box;box-sizing: border-box;}
+*:before,*:after {-webkit-box-sizing: border-box;-moz-box-sizing: border-box;box-sizing: border-box}
+dt, th {font-weight:normal}
+
+::-webkit-scrollbar {width:7px;} 
+::-webkit-scrollbar-thumb {background-color:#4f4f4f;} 
+::-webkit-scrollbar-track {background-color:#232323;}

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 공지사항 detail
+ * @author 권기완
+ * @since 2022. 06. 15.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2022.06.15.   	권기완          최초 생성
+ -->
+ <mapper namespace="DetailNoticeDAO">
+ 	<select id="selectDetailList" parameterType="map" resultType="resultCamelMap">
+ 		select 		a.bsct_se as bsctSe 
+ 				   , a.bsct_sn as notice_pk
+				   , c.atch_file_id as file_pk
+				   , c.orig_file_nm as file_nm
+				   , a.bsct_sj as title
+				   , a.bsct_cn as contents
+				   , a.rgtr_id as reg_id
+				   , to_char(a.reg_dt,'YYYY-MM-DD') as reg_date
+ 		from mngr_bsct_list a
+ 			left join mngr_bsct_file_dtl c
+	    		ON c.bsct_sn = a.bsct_sn
+ 		where 1=1 
+ 		and a.bsct_sn = #{noticePk}
+ 		and a.bsct_se = #{bsctSe}
+ 	</select>
+ 	<select id="selectFileInfo" parameterType="map" resultType="resultCamelMap">
+ 		select 	
+ 				orig_file_nm,
+ 				strg_file_nm
+ 		from mngr_bsct_file_dtl
+ 		where 1=1 
+ 			and atch_file_id = #{filePk}
+ 			and bsct_se = #{bsctSe}
+ 	</select>
+ 	
+ 	<!--  다중 파일 데이터 가져오기 리스트  -->
+ 	<select id="selectFilesInfo" parameterType="map" resultType="resultCamelMap">
+ 	 	select 	
+ 				orig_file_nm,
+ 				strg_file_nm
+ 		from mngr_bsct_file_dtl
+ 		where 1=1 
+ 			and bsct_sn = #{noticePk}
+ 			and bsct_se = #{bsctSe}		
+ 	</select>
+ 	
+ </mapper>

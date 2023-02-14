@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 메뉴 관리 SQL
+ * @author 김부권
+ * @since 2022. 06. 17.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *     수정일			     수정자			                수정내용
+ *  ============    ==========		==========================
+ *  2022. 06. 17.      김부권                                최초 생성
+
+ -->
+<mapper namespace="CommonMng">
+	
+	
+ 	<!-- 권한별 메뉴 목록 조회 -->
+ 	<select id="selectRoleMenuList" parameterType="map" resultType="resultCamelMap">
+
+ 		/* 권한별 메뉴 목록 조회				
+ 		권한 설정 완료 후 아래 쿼리로 변경해야 함 Session의 로그인 유저 아이디로 조건 적용 해야 함*/
+ 		WITH RECURSIVE RC AS (
+			SELECT Cast(M.indct_orr As integer)  AS HIERARCHY,
+			       M.lwrt_menu_cd as menu_code, 
+				   M.menu_cd as parent_code, 
+				   M.menu_nm as menu_name, 
+				   M.menu_link as menu_link, 
+				   coalesce(M.icon_clss, '') AS icon_class, 
+				   M.menu_tp as menu_type, 
+				   M.menu_dp as menu_depth, 
+				   M.indct_yn as display_yn, 
+				   M.use_yn as use_yn,
+				   M.indct_orr as display_seq
+			  FROM mngr_menu_mng M
+			 WHERE M.indct_yn = 'Y'
+			   AND M.use_yn = 'Y'
+			   AND M.menu_cd = 'MENU_00000'
+			UNION ALL
+			SELECT Cast((RC.hierarchy || M.indct_orr)  As integer) AS HIERARCHY,
+			 	   M.lwrt_menu_cd as menu_code, 
+				   M.menu_cd as parent_code, 
+				   M.menu_nm as menu_name, 
+				   M.menu_link as menu_link, 
+				   coalesce(M.icon_clss, '') AS icon_class, 
+				   M.menu_tp as menu_type, 
+				   M.menu_dp as menu_depth, 
+				   M.indct_yn as display_yn, 
+				   M.use_yn as use_yn,
+				   M.indct_orr as display_seq
+			  FROM mngr_menu_mng M JOIN RC ON RC.menu_code = M.menu_cd
+			 WHERE M.indct_yn = 'Y'
+			   AND M.use_yn = 'Y'
+		), role_menu_list AS (
+		SELECT DISTINCT U.user_id, M.menu_cd
+--  		  FROM mng_user_auth U,
+          FROM (select user_id, 'USERROLE_000001' as role_code
+                  from organ_view as a
+                 where 1=1
+                   and a.user_id = #{loginId}
+                union all
+                select user_id, auth_cd as auth_cd
+                  from mng_user_auth
+                 where 1=1
+                   and user_id = #{loginId}
+                   and auth_cd <![CDATA[<>]]> 'USERROLE_000001'
+               ) U, 
+		       mng_auth R, 
+		       mng_auth_menu M
+		 WHERE U.role_code = R.auth_cd
+		   AND R.auth_cd = M.auth_cd
+		   AND U.user_id = #{loginId}
+		   AND U.role_code <![CDATA[<>]]> 'USERROLE_000002' 
+		   order by menu_cd
+		)
+		SELECT M.*
+		  FROM (
+				SELECT menu_code, parent_code, 
+				       menu_name, menu_link, coalesce(icon_class, '') AS icon_class, menu_type, 
+				       menu_depth, display_yn, use_yn,
+				       (SELECT COUNT(*) FROM mngr_menu_mng S WHERE indct_yn = 'Y' AND use_yn = 'Y' AND S.menu_cd = M.menu_code) AS child_cnt, display_seq
+				  FROM RC M
+				ORDER BY menu_depth, HIERARCHY
+		) M, role_menu_list R
+		 WHERE 1=1
+ 		   AND M.menu_code = R.menu_cd
+ 		   order by M.parent_code , M.display_seq::integer	
+ 		
+
+<!-- 		WITH RECURSIVE RC AS (
+			SELECT Cast(M.display_seq As integer)  AS HIERARCHY,
+			       M.menu_code, 
+				   M.parent_code, 
+				   M.menu_name, 
+				   M.menu_link, 
+				   coalesce(M.icon_class, '') AS icon_class, 
+				   M.menu_type, 
+				   M.menu_depth, 
+				   M.display_yn, 
+				   M.use_yn,
+				   M.display_seq
+			  FROM mngr_menu M
+			 WHERE M.display_yn = 'Y'
+			   AND M.use_yn = 'Y'
+			   AND M.parent_code = 'MENU_00000'
+			UNION ALL
+			SELECT Cast((RC.hierarchy || M.display_seq)  As integer) AS HIERARCHY,
+			 	   M.menu_code, 
+				   M.parent_code, 
+				   M.menu_name, 
+				   M.menu_link, 
+				   coalesce(M.icon_class, '') AS icon_class, 
+				   M.menu_type, 
+				   M.menu_depth, 
+				   M.display_yn, 
+				   M.use_yn,
+				   M.display_seq
+			  FROM mngr_menu M JOIN RC ON RC.menu_code = M.parent_code
+			 WHERE M.display_yn = 'Y'
+			   AND M.use_yn = 'Y'
+		)
+		SELECT menu_code, parent_code, menu_name, menu_link, coalesce(icon_class, '') AS icon_class, menu_type, menu_depth, display_yn, use_yn,
+		       (SELECT COUNT(*) FROM mngr_menu S WHERE display_yn = 'Y' AND use_yn = 'Y' AND S.parent_code = M.menu_code) AS child_cnt
+		  FROM RC M
+		ORDER BY menu_depth, HIERARCHY -->
+		<!-- 	WITH RECURSIVE RC AS (
+			SELECT Cast(M.display_seq As TEXT)  AS HIERARCHY,
+			       M.menu_code, 
+				   M.parent_code, 
+				   M.menu_name, 
+				   M.menu_link, 
+				   coalesce(M.icon_class, '') AS icon_class, 
+				   M.menu_type, 
+				   M.menu_depth, 
+				   M.display_yn, 
+				   M.use_yn,
+				   M.display_seq
+			  FROM mngr_menu M
+			 WHERE M.display_yn = 'Y'
+			   AND M.use_yn = 'Y'
+			   AND M.parent_code = 'MENU_00000'
+			UNION ALL
+			SELECT Cast((RC.hierarchy || M.display_seq)  As TEXT) AS HIERARCHY,
+			 	   M.menu_code, 
+				   M.parent_code, 
+				   M.menu_name, 
+				   M.menu_link, 
+				   coalesce(M.icon_class, '') AS icon_class, 
+				   M.menu_type, 
+				   M.menu_depth, 
+				   M.display_yn, 
+				   M.use_yn,
+				   M.display_seq
+			  FROM mngr_menu M JOIN RC ON RC.menu_code = M.parent_code
+			 WHERE M.display_yn = 'Y'
+			   AND M.use_yn = 'Y'
+		)
+		SELECT menu_code, parent_code, menu_name, menu_link, coalesce(icon_class, '') AS icon_class, menu_type, menu_depth, display_yn, use_yn,
+		       (SELECT COUNT(*) FROM mngr_menu S WHERE display_yn = 'Y' AND use_yn = 'Y' AND S.parent_code = M.menu_code) AS child_cnt
+		  FROM RC M
+		ORDER BY menu_depth, HIERARCHY -->
+ 	</select>
+ 	
+	
+	<!-- 유저 권한 조회 -->
+	<select id="selectGetRoleInfo" parameterType="map" resultType="resultCamelMap">
+	   select auth_cd 
+	     from MNG_USER_AUTH
+	    where 1=1 
+	      and user_id = #{loginId};
+	
+	</select>
+	
+	<!-- 메뉴 권한 체크 -->
+ 	<select id="checkRoleMenuCnt" parameterType="map" resultType="resultCamelMap">
+ 		/* 메뉴 권한 체크					*/
+ 		with RECURSIVE RC AS (
+			SELECT Cast(M.indct_orr As integer)  AS HIERARCHY,
+                   M.lgc_menu_cd as menu_code, 
+                   M.menu_cd as parent_code, 
+                   M.menu_nm as menu_name, 
+                   M.menu_url as menu_link, 
+                   coalesce(M.icon_clss, '') AS icon_class, 
+                   M.menu_tp as menu_type, 
+                   M.menu_dp as menu_depth, 
+                   M.indct_yn as display_yn, 
+                   M.use_yn as use_yn,
+                   M.indct_orr as display_seq
+			  FROM mngr_menu_mng M
+			 WHERE M.use_yn = 'Y'
+			UNION ALL
+			SELECT Cast((RC.hierarchy || M.indct_orr)  As integer) AS HIERARCHY,
+                   M.lgc_menu_cd as menu_code, 
+                   M.menu_cd as parent_code, 
+                   M.menu_nm as menu_name, 
+                   M.menu_url as menu_link, 
+                   coalesce(M.icon_clss, '') AS icon_class, 
+                   M.menu_tp as menu_type, 
+                   M.menu_dp as menu_depth, 
+                   M.indct_yn as display_yn, 
+                   M.use_yn as use_yn,
+                   M.indct_orr as display_seq
+              FROM mngr_menu_mng M JOIN RC ON RC.menu_code = M.menu_cd
+             WHERE M.use_yn = 'Y'
+		), role_menu_list AS (
+		SELECT DISTINCT U.user_id, M.menu_cd
+          FROM (select user_id as user_id, role_code as role_code
+                  from mngr_user_role as a
+                 where 1=1
+                   and a.user_id = #{loginId}
+                    ) U, 
+		       (SELECT cd_id AS auth_cd FROM mngr_code WHERE grp_cd_id='GRP0006') R, 
+               (SELECT auth_se_cd AS auth_cd, menu_cd FROM mngr_role_menu) M
+		 WHERE U.role_code = R.auth_cd
+		   AND R.auth_cd = M.auth_cd
+		   AND U.user_id = #{loginId}
+		   AND M.menu_cd = #{menuCode}
+		)
+		SELECT M.*
+		  FROM (
+				SELECT menu_code AS parent_code , parent_code AS menu_code , menu_name, menu_link, coalesce(icon_class, '') AS icon_class, menu_type, menu_depth, display_yn, use_yn,
+				       (SELECT COUNT(*) FROM mngr_menu_mng S WHERE indct_yn = 'Y' AND use_yn = 'Y' AND S.menu_cd = M.menu_code) AS child_cnt
+				  FROM RC M
+				ORDER BY menu_depth, HIERARCHY
+		) M, role_menu_list R
+		 WHERE 1=1
+ 		   AND M.menu_code = R.menu_cd
+
+ 	</select>
+	
+
+</mapper>

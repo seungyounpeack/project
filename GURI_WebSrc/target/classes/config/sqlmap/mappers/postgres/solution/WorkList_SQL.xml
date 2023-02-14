@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 솔루션 워크플로워 리스트 관리
+ * @author 권기완
+ * @since 2022. 10. 26.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2022.10.26.   	권기완          최초 생성
+ -->
+ <mapper namespace="WorkListDAO">
+ 	<!-- List 검색조건에 맞게 가져오기 -->
+ 	<select id="selectWorkList" parameterType="map" resultType="resultCamelMap">
+ 		with a as (select a.work_num as work_pk,
+ 		   		  a.work_cd as sort_cd,
+ 		   		  c.cd_nm as sort,
+ 		   		  a.work_title as title,
+ 		   		  a.work_info as info,
+ 		   		  case when a.work_fee = 0 then '무료' else a.work_fee || '원' end as fee,
+ 		   		  case when a.work_view is null then 0 else a.work_view end as view,
+ 		   		  case when a.work_down is null then 0 else a.work_down end as down,
+ 		   		  to_char(a.work_crt_date,'yyyy.mm.dd') as reg_date,
+ 		   		  case when b.file_path is null then '/dist/images/manager/' else b.file_path end as file_path,
+ 		   		  case when b.file_ori_name is null then 'login_logo' else b.file_ori_name end as file_ori_name,
+ 		   		  case when b.file_extn_name is null then 'png' else b.file_extn_name end as file_extn_name
+ 		   	 from eyet_work a  left join 
+ 		   	 		( select work_num,
+ 		   	 				 file_path, 
+ 		   	 				 file_ori_name ,
+ 		   	 				 file_extn_name
+ 		   	 			from eyet_work_file 
+ 		   	 		   where 1=1 
+ 		   	 			 and file_id = 2
+ 		   	 		 ) b
+ 		   	 	  on a.work_num = b.work_num
+ 		   	 	   left join (
+ 		   	 	  select * from dsu_cmm_code where 1=1 and grp_cd_id = 'GRP0005'
+ 		   	 	  )c
+ 		   	 	  on a.work_cd = c.cd_id 
+ 		   	where 1=1 
+ 		    <if test="keyword != '' and keyword != null ">
+			  AND a.work_title like '%'||#{keyword}||'%'
+			</if>
+			<if test="chkCat != '' and chkCat != null ">
+				  AND a.work_cd in
+			  	<foreach item="item" index="index" collection="chkCat" open="(" close=")" separator=",">
+            		#{item}
+    			</foreach>
+    		</if>
+			<if test="chkFee != '' and chkFee != null ">
+				<choose>
+					<otherwise>
+						<if test="chkFee =='001'">
+							and a.work_fee <![CDATA[<>]]> '0'
+						</if>
+						<if test="chkFee =='002'">
+							and a.work_fee = '0'
+						</if>
+					</otherwise>
+				</choose>
+			</if>
+		)
+		 	select *
+ 		      from a ,(select count(1) as cnt from a) as b
+			<choose>
+				<otherwise>
+					<if test="sort =='001'">
+						order by reg_date desc
+					</if>
+					<if test="sort =='002'">
+						order by view desc
+					</if>
+					<if test="sort =='003'">
+						order by down desc
+					</if>
+				</otherwise>
+			</choose>
+			<choose>
+		 	<when test="nowPageCnt != null and nowPageCnt != '' ">
+			    LIMIT ${nowPageCnt}
+			</when>	 
+			<otherwise>
+				LIMIT 20
+			</otherwise>
+		 	</choose>
+		 	<choose>
+		 		<when test="nextNo != null and nextNo != '' ">
+					 OFFSET ${nextNo}
+				</when>	 
+				<otherwise>
+					OFFSET 0
+				</otherwise>
+	    	</choose>
+	</select>
+	<!-- 카테고리 메뉴 select -->
+	<select id="selectCategory" resultType="resultCamelMap">
+		select cd_id as cat_id,
+ 			   cd_nm as cat_nm,
+ 			   case when cnt is null then 0 else cnt end as cnt
+ 		  from (select cd_id,
+		     		   cd_nm
+			   	  from dsu_cmm_code 
+			   	 where 1=1 
+			   	   and grp_cd_id = 'GRP0005') a 
+		  left join (
+			    		select count(1) as cnt,
+			   	     	        work_cd 
+			   	 		  from eyet_work 
+			   	 		 group by work_cd
+			   	 	 ) b
+		 on a.cd_id = b.work_cd
+		 order by cnt desc
+	</select>
+ </mapper>

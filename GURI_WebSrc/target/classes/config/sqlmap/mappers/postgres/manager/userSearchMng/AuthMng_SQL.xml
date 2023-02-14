@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 메뉴 관리 SQL
+ * @author 신용삼
+ * @since 2019. 07. 08.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2019.07.08.   	신용삼          최초 생성
+
+ -->
+<mapper namespace="AuthManageDAO">
+
+
+	<!-- 권한 목록 조회하기 -->
+	<select id="selectAuthList" parameterType="map" resultType="resultCamelMap">
+
+		SELECT auth_cd as role_code, auth_nm as role_name, auth_deci as role_desc, use_yn 	
+		  FROM mng_auth as R
+		ORDER BY auth_cd
+		  
+	</select>
+	
+	
+	<!-- 권한 정보 저장하기 -->
+	<insert id="insertAuthInfo" parameterType="map">
+		INSERT INTO mng_auth
+		(auth_cd, auth_nm, auth_deci, use_yn, crt_dt, crt_user_id, mdfcn_dt, mdfcn_user_id)
+		VALUES(
+				(SELECT 
+				       case when max(split_part(auth_cd, '_',2)) is null then 'USERROLE_000001' 
+				       else 'USERROLE_' || lpad((max(split_part(auth_cd, '_',2))::int+1)::text, 6, '0') end as auth_cd
+				  FROM mng_auth), 
+				  #{roleName}, #{roleDesc}, #{useYn}, NOW(), #{loginId}, null, null
+		       )
+		<!-- INSERT INTO mng_auth
+			(auth_cd, auth_nm, auth_deci, use_yn, crt_dt, crt_user_id, mdfcn_dt, mdfcn_user_id)
+		VALUES
+			(#{roleCode}, #{roleName}, #{roleDesc}, #{useYn}, NOW(), #{loginId}, null, null) -->
+			
+	</insert>
+	
+	
+	<!-- 메뉴 정보 수정하기 -->
+	<update id="updateAuthInfo" parameterType="map">
+	
+		UPDATE mng_auth
+		   SET auth_nm		= #{roleName},
+		   	   auth_deci		= #{roleDesc},
+		   	   use_yn			= #{useYn},
+		   	   mdfcn_dt		= NOW(),
+		   	   mdfcn_user_id		= #{loginId}
+		 WHERE auth_cd		= #{roleCode}
+	
+	</update>
+	
+	
+	<!-- 메뉴 정보 삭제하기 -->
+	<delete id="deleteAuthInfo" parameterType="map">
+		
+		DELETE FROM mng_auth
+		 WHERE auth_cd	= #{roleCode}
+		 
+	</delete>
+	
+	
+	<!-- 권한별 메뉴 정보 저장하기 -->
+	<insert id="insertAuthMenuInfo" parameterType="map">
+
+		INSERT INTO mng_auth_menu
+			(auth_cd, menu_cd, crt_dt, crt_user_id)
+		VALUES
+			(#{roleCode}, #{menuCode}, NOW(), #{loginId})
+			
+	</insert>
+	
+	
+	<!-- 권한별 메뉴 정보 삭제하기 -->
+	<delete id="deleteAuthMenuInfo" parameterType="map">
+		
+		DELETE FROM mng_auth_menu
+		 WHERE auth_cd	= #{roleCode}
+		 
+	</delete>
+	
+	
+	
+	
+	<!-- 부서별 권한 목록 조회하기 -->
+	<select id="selectDeptAuthList" parameterType="map" resultType="resultCamelMap">
+	
+		SELECT auth_cd as role_code, auth_nm as role_name, auth_deci as role_desc
+		  FROM mng_auth
+		 WHERE use_yn = 'Y'
+	
+	</select>
+	
+	
+	
+	<!-- 권한 코드별 선택한 메뉴 목록 조회하기 -->
+	<select id="selectAuthMenuList" parameterType="map" resultType="resultCamelMap">
+	
+		WITH menu_list AS (
+			<!-- SELECT
+			   'MENU_00000' as menu_code,
+			   '' as parent_code,
+			   'Root' as menu_name,
+			   '' as menu_link,
+			   'M' as menu_type,
+			   0 as menu_depth,
+			   'N' as display_yn,
+			   'Y' as use_yn,
+			   '' as parent_name 
+			UNION ALL -->
+			SELECT
+			   lwrt_menu_cd as menu_code,
+			   menu_cd as parent_code,
+			   menu_nm as menu_name,
+			   menu_link as menu_link,
+			   menu_tp as menu_type,
+			   menu_dp as menu_depth,
+			   use_yn as display_yn,
+			   use_yn,
+			   CASE menu_cd 
+			      WHEN 'MENU_00000' THEN'Root' 
+			      ELSE (
+				    SELECT MAX(menu_nm) 
+			              FROM mng_menu_info 
+				     WHERE lwrt_menu_cd = M.menu_cd
+				   ) 
+			   END as parent_name 
+			  FROM mng_menu_info M 
+			ORDER BY menu_code
+		),
+		role_menu_list AS (
+		SELECT menu_cd as menu_code
+		  FROM mng_auth_menu
+		 WHERE auth_cd = #{roleCode}
+		)
+		SELECT menu_code, menu_name, parent_code, menu_link, menu_type, 
+		       CASE menu_type WHEN 'M' THEN '메뉴' WHEN 'S' THEN '서비스' END as menu_type_name,
+		       (SELECT CASE WHEN COUNT(*) = 0 THEN 'N' ELSE 'Y' END 
+		          FROM role_menu_list RL 
+		         WHERE RL.menu_code = M.menu_code) as menu_selected
+		  FROM menu_list M 
+
+	</select>
+
+</mapper>

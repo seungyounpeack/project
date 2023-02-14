@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="DataRegDAO">
+
+	<!-- 분야별 데이터 목록 조회 -->
+	<select id="getDataList" parameterType="map" resultType="resultCamelMap">
+	WITH code_list AS 
+		(
+			SELECT data_tp_id as code_id, data_tp_nm as code_name, tbl_nm as code_desc, '인구' AS gubun_name
+			  FROM mngr_ulod_data_list
+			 WHERE split_part(data_tp_id, '_', 1) = 'POPL'
+			   AND use_yn = 'Y'
+			UNION ALL
+			SELECT data_tp_id as code_id, data_tp_nm as code_name, tbl_nm as code_desc, '매출' AS gubun_name
+			  FROM mngr_ulod_data_list
+			 WHERE split_part(data_tp_id, '_', 1) = 'SALE'
+			   AND use_yn = 'Y'
+			UNION ALL
+			SELECT data_tp_id as code_id, data_tp_nm as code_name, tbl_nm as code_desc, '테스트' AS gubun_name
+			  FROM mngr_ulod_data_list
+			 WHERE split_part(data_tp_id, '_', 1) = 'TEST'
+			   AND use_yn = 'Y'
+		)
+		SELECT code_id, code_name, code_desc, gubun_name, target_month, create_start_date, create_end_date
+		FROM (
+				SELECT CD.code_id, CD.code_name, CD.code_desc, CD.gubun_name, 
+				       coalesce(UD.aplcn_ym,'') AS target_month,
+				       to_char(UD.data_crt_bgng_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS create_start_date,
+				       to_char(UD.data_crt_end_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS create_end_date
+				  FROM code_list AS CD LEFT JOIN mngr_ulod_data_info AS UD
+				       ON CD.code_id = UD.data_tp_id
+				 ORDER BY CD.code_id
+			   ) A 
+	</select>
+	
+	<!-- 데이터 이력 가져오기 -->
+	<select id="getDataHisList" parameterType="map" resultType="resultCamelMap">
+		SELECT 
+	           data_tp_id as code_id, 
+	           aplcn_ym as target_month, 
+	           atch_file_id as atch_file_id, 
+	           prcs_tp_cd as proc_type_cd, 
+	           prcs_resl as proc_desc, 
+	           prcs_resl_msg as result_msg,
+			   to_char(prcs_bgng_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS proc_start_time, 
+			   to_char(prcs_end_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS proc_end_time,
+			   to_char(crt_dt::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS create_date,
+		       (CASE WHEN prcs_tp_cd = 'U' THEN '업로드'
+		             WHEN prcs_tp_cd = 'D' THEN '데이터'
+		             WHEN prcs_tp_cd = 'A' THEN '통계'
+		       END) AS gubun_name
+		  FROM mngr_ulod_data_hist
+		 WHERE data_tp_id = #{codeId}
+		 ORDER BY crt_dt DESC, prcs_tp_cd ASC
+	</select>
+	
+	<!-- 부서 정보 가져오기  -->
+	<select id="getDepList" parameterType="map" resultType="resultCamelMap">
+ 		SELECT cd_id, cd_nm
+ 		  FROM mngr_code
+ 		 WHERE 1=1
+ 		       AND grp_cd_id = 'GRP0009'
+ 		       AND use_yn = 'Y'
+ 		 ORDER BY cd_id	
+	</select>
+	
+	<!-- 원본 테이블명 가져오기  -->
+	<select id="getDataTableNm" parameterType="map" resultType="resultCamelMap">
+		SELECT tbl_nm 
+		  FROM mngr_ulod_data_list
+	 	 WHERE 1=1
+		       AND data_tp_id = #{codeId}
+	</select>
+	
+	<!-- 선택한 데이터 건수 가져오기  -->
+	<select id="getDataContentAllCount" parameterType="map" resultType="resultCamelMap">
+		SELECT *
+		  FROM fn_get_count(#{codeDesc}, #{targetMonth}) count;
+	</select>
+	
+	<!-- 선택한 데이터 전체 년도 데이터 가져오기   -->
+	<select id="getDataYearList" parameterType="map" resultType="resultCamelMap">
+		SELECT *
+		  FROM fn_get_year_list(#{codeDesc});
+	</select>
+	
+	<!-- 파일 업로드 내용 저장  -->
+	<insert id="insertFileUploadInfo" parameterType="map">
+		WITH upload_list AS (
+			UPDATE mngr_ulod_data_info AS T
+			   SET atch_file_id 		= #{atchFileId},
+			       aplcn_ym			= #{targetMonth},
+			   	   data_crt_bgng_dt 	= #{createStartDate}::timestamp,
+			   	   data_crt_end_dt 		= #{createEndDate}::timestamp,
+			   	   data_crt_user_id 	= #{loginId}
+			 WHERE data_tp_id = #{codeId}
+			 RETURNING T.*
+		)
+		INSERT INTO mngr_ulod_data_info
+			 (data_tp_id, aplcn_ym, atch_file_id, data_crt_bgng_dt, data_crt_end_dt, data_crt_user_id)
+		SELECT #{codeId}, #{targetMonth}, #{atchFileId}, #{createStartDate}::timestamp, #{createEndDate}::timestamp, #{loginId}
+		 WHERE NOT EXISTS (SELECT * FROM upload_list)
+	</insert>
+	
+	<!-- 업로드 데이터 History 저장하기 -->
+	<insert id="insertFileUploadHistory" parameterType="map">
+	   INSERT INTO public.mngr_ulod_data_hist
+			(gid, data_tp_id, aplcn_ym, atch_file_id, tot_row_cnt, ulod_scs_row_cnt, prcs_tp_cd, prcs_resl, prcs_resl_msg, prcs_bgng_dt, prcs_end_dt, crt_dt, crt_user_id)
+	   VALUES
+			(
+              (
+	              SELECT 
+				         case when max(gid) is null then 0
+				         else max(gid)+1 end as gid
+				    FROM mngr_ulod_data_hist
+              ), #{codeId}, #{targetMonth}, #{atchFileId}, ${totCnt}, ${suTotCnt}, #{procTypeCd}, #{procDesc}, #{resultMsg}, #{procStartTime}::timestamp, #{procEndTime}::timestamp, Now(), #{loginId}
+            );
+		
+	</insert>
+	
+	<!-- Upload File 정보 조회하기 -->
+	<select id="selectUpliadFileInfo" parameterType="map" resultType="resultCamelMap">
+		SELECT UD.atch_file_id, 
+		       FD.atch_file_strg_path as file_stre_cours, FD.strg_file_nm as stre_file_nm, FD.orig_atch_file_nm as orignl_file_nm, FD.file_extn as file_extsn
+		  FROM mngr_ulod_data_info AS UD INNER JOIN mngr_atch_file_info FD
+		       ON UD.atch_file_id = FD.atch_file_id
+		 WHERE UD.atch_file_id = #{atchFileId}
+	</select>
+	
+	<!-- 테이블 존재 여부 조회하기 -->
+	<select id="selectTableExist" parameterType="map" resultType="resultCamelMap">
+		SELECT count(1) 
+	      FROM information_schema.tables
+	     WHERE 1=1
+	       AND table_schema = #{schema}
+	       AND table_name = #{tableName}
+	</select>
+	
+	<!-- 임시 테이블 생성 -->
+	<update id="createIfTable" parameterType="map" >
+	 	SELECT *
+          FROM fn_create_table(#{codeDesc});
+	</update>
+	
+	<!-- 원본 테이블 컬럼명 조회하기 -->
+	<select id="selectGetColumn" parameterType="map" resultType="resultCamelMap">
+	  SELECT name
+        FROM fn_tb_clum_nm(#{schemaNum}, #{tableNm}, 'all')
+	</select>
+	
+	<!-- 원본 테이블 컬럼 타입 조회하기 -->
+	<select id="selectGetColumnType" parameterType="map" resultType="resultCamelMap">
+	  SELECT code
+        FROM fn_tb_clum_nm(#{schemaNum}, #{tableNm}, 'all')
+	</select>
+	
+	<!-- 임시테이블 삭제하기 -->
+	<delete id="deleteIfTable" parameterType="map">
+		SELECT *
+		FROM fn_delete_table (#{codeDesc});
+	</delete>
+	
+	<insert id="InsertDataTable" parameterType="map">
+		SELECT *
+		  FROM fn_ins_table (#{codeDesc});
+	</insert>
+	
+	<!-- 파일 다운로드  -->
+	<select id="selectDldFile" parameterType="map" resultType="resultCamelMap">
+		SELECT b.atch_file_strg_path || b.strg_file_nm file_url,
+			   b.orig_atch_file_nm,	   
+		       b.strg_file_nm 
+		  FROM 
+	  		   mngr_ulod_data_info a,
+               mngr_atch_file_info b
+	      WHERE 1=1
+      			AND a.atch_file_id = #{no}
+     			AND a.atch_file_id = b.atch_file_id
+	</select>
+	
+	<!-- 테이블 컬럼명 및 컬럼 comment 데이터 가져오기  -->
+	<select id="selectColCom" parameterType="map" resultType="resultCamelMap">
+		SELECT cols.column_name,
+	    	 (
+		        SELECT pg_catalog.col_description(c.oid, cols.ordinal_position::int)
+		          FROM pg_catalog.pg_class c
+		         WHERE 1=1
+		               AND c.oid = (SELECT cols.table_name::regclass::oid) 
+		               AND c.relname = cols.table_name
+	   		 ) as column_comment
+	     FROM information_schema.columns cols
+	    WHERE 1=1
+	          AND cols.table_schema  = #{schemaOri}
+	          AND cols.table_name    = #{tableNm}; 
+	</select>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 공지사항 수정
+ * @author 권기완
+ * @since 2022. 06. 15.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2022.06.15.   	권기완          최초 생성
+ -->
+ <mapper namespace="UpdateNoticeDAO">
+ 	<!-- 공지사항 수정 -->
+ 	<update id="updateNotice">
+ 		update mngr_bsct_list 
+ 			set bsct_sj =  #{title},
+ 				bsct_cn = #{contents},
+ 				mdfcn_dt = now(),
+ 				mdfr_id = #{loginId}
+ 			where 1=1 
+ 			and bsct_sn = #{noticePk}
+ 			and bsct_se = #{bsctSe}
+ 	</update>
+ 	
+ 	<!-- 파일 삭제 -->
+ 	<delete id="deleteFile" parameterType="map">
+ 		DELETE 
+ 		  FROM mngr_bsct_file_dtl 
+ 		 WHERE 1=1 
+ 		       AND atch_file_id = #{atchFileId};
+ 	</delete>
+ 	
+ 	<!-- 파일 추가 -->
+ 	<insert id="updateFileUp">
+ 		insert into mngr_bsct_file_dtl(
+ 			bsct_sn,
+ 			atch_file_id,
+ 			orig_file_nm,
+ 			strg_file_nm,
+ 			file_strg_path,
+ 			file_extn,
+ 			file_sz,
+ 			reg_dt,
+ 			rgtr_id
+ 		)VALUES(
+ 			#{bsctSn},
+ 			(select file_id from public.mngr_sqe_info where 1=1 and tbl_nm = 'mngr_bsct_file_dtl'),
+ 			#{orignlFileNm},
+ 			#{streFileNm},
+ 			#{fileStreCours},
+ 			#{fileExtsn},
+ 			#{fileMg},
+ 			now(),
+ 			#{creatId}
+ 		)
+ 	</insert> 	
+ 	
+ </mapper>

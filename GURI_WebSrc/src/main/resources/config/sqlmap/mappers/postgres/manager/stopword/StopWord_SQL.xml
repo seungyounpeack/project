@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="StopWordDAO">
+	
+	<!-- 
+	<select id="selectWordList" parameterType="map" resultType="resultCamelMap">
+		SELECT *
+		FROM mngr_stwd_dic
+		WHERE 1=1
+		<if test="searchWord != '' and searchWord != null">
+			  AND word like '%'||#{searchWord}||'%'
+		</if>
+		<![CDATA[
+			and reg_dt >= #{start_date} and reg_dt <= #{end_date}
+		]]>
+		order by reg_dt DESC;
+	</select>
+	
+	<insert id="insertWord" parameterType="map">
+		INSERT INTO mngr_stwd_dic (word, reg_dt, word_tp, rgtr_id)
+		VALUES (#{word}, now()::date, #{wordType}, #{userId});
+	</insert>
+	
+	<delete id="deleteWord" parameterType="map">
+		delete
+		from mngr_stwd_dic
+		where word = #{deleteWord};	
+	</delete>
+
+	<select id="selectWordDate" resultType="resultCamelMap">
+		SELECT  
+			date_trunc('month', reg_dt::date)::date  as start_date, 
+			reg_dt as end_date
+		FROM
+			(
+			SELECT reg_dt FROM mngr_stwd_dic ORDER BY reg_dt desc Limit 1
+			) as time
+	</select>
+		
+	 -->
+	<!-- 키워드 목록 조회  -->
+	<select id="selectWordList" parameterType="map" resultType="resultCamelMap">
+		SELECT *
+		FROM cmm_stwd_dic
+		WHERE 1=1
+		<if test="searchWord != '' and searchWord != null">
+			  AND word like '%'||#{searchWord}||'%'
+		</if>
+		<![CDATA[
+			and reg_ymd >= #{start_date} and reg_ymd <= #{end_date}
+		]]>
+		order by reg_ymd DESC;
+	</select>
+	
+	<!-- 키워드 추가  -->
+	<insert id="insertWord" parameterType="map">
+		INSERT INTO mngr_stwd_dic (word, reg_ymd, word_tp)
+		VALUES (#{word}, now()::date, #{wordType} );
+	</insert>
+	
+	<!-- 키워드 삭제  -->
+	<delete id="deleteWord" parameterType="map">
+		delete
+		from cmm_stwd_dic
+		where word = #{deleteWord};	
+	</delete>
+
+	<!-- 기준 날짜 설정  -->
+	<select id="selectWordDate" resultType="resultCamelMap">
+		SELECT  
+			date_trunc('month', reg_ymd::date)::date  as start_date, 
+			reg_ymd as end_date
+		FROM
+			(
+			SELECT reg_ymd FROM cmm_stwd_dic ORDER BY reg_ymd desc Limit 1
+			) as time
+	</select>
+	
+</mapper>

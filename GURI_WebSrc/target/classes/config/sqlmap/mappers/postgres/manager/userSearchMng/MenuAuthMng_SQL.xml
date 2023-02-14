@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 메뉴 권한 SQL
+ * @author 김부권
+ * @since 2022. 06. 22.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+*     수정일                         수정자                            수정내용
+*  ===========       =============   ======================
+*  2022.06.22.           김부권                          최초 생성
+*   
+
+ -->
+<mapper namespace="MenuAuthMng">
+
+
+	
+	<!-- 권한 목록 조회하기 -->
+	<select id="selectAuthList" parameterType="map" resultType="resultCamelMap">
+
+		SELECT cd_id as role_code, 
+		       cd_nm AS role_name,
+		       cd_desc AS role_desc,
+		       use_yn AS use_yn
+		  FROM mngr_code as R
+		 WHERE grp_cd_id='GRP0006'
+		ORDER BY cd_id
+		  
+	</select>
+	
+	<select id="selectCheckMenuAuth" parameterType="map" resultType="resultCamelMap">
+		SELECT auth_se_cd, menu_cd
+		  FROM mngr_role_menu
+		 WHERE 1=1
+		   AND auth_se_cd = #{roleCode}
+	</select>
+	<!-- 권한별 메뉴 정보 저장하기 -->
+	<insert id="insertAuthMenuInfo" parameterType="map">
+
+		INSERT INTO mngr_role_menu
+			(auth_se_cd, menu_cd, reg_dt, rgtr_id)
+		VALUES
+			(#{roleCode}, #{menuCode}, NOW(), #{loginId})
+			
+	</insert>
+	
+	
+	<!-- 권한별 메뉴 정보 삭제하기 -->
+	<delete id="deleteAuthMenuInfo" parameterType="map">
+		
+		DELETE FROM mngr_role_menu
+		 WHERE auth_se_cd	= #{roleCode}
+		 
+	</delete>
+	
+	
+	
+	<!-- 권한 코드별 선택한 메뉴 목록 조회하기 -->
+	<select id="selectAuthMenuList" parameterType="map" resultType="resultCamelMap">
+	
+		WITH menu_list AS (
+		 SELECT 
+              'MENU_00000' as menu_code,
+			   '' as parent_code,
+			   'Root' as menu_name,
+			   '' as menu_link,
+			   'M' as menu_type,
+			   0 as menu_depth,
+			   'N' as display_yn,
+			   'Y' as use_yn,
+			   '' as parent_name 
+        UNION ALL
+            SELECT
+               menu_cd as menu_code,
+               lgc_menu_cd as parent_code,
+               menu_nm as menu_name,
+               menu_url as menu_link,
+               menu_tp as menu_type,
+               menu_dp as menu_depth,
+               use_yn as display_yn,
+               use_yn,
+               CASE menu_cd 
+                  WHEN 'MENU_00000' THEN'Root' 
+                  ELSE (
+                    SELECT MAX(menu_nm) 
+                          FROM mngr_menu_mng 
+                     WHERE menu_cd = M.lgc_menu_cd
+                   ) 
+               END as parent_name 
+              FROM mngr_menu_mng M 
+            ORDER BY menu_code
+        ),
+        role_menu_list AS (
+        SELECT menu_cd as menu_code
+          FROM mngr_role_menu
+         WHERE auth_se_cd = #{roleCode}
+        )
+        SELECT menu_code, menu_name, parent_code, menu_link, menu_type, 
+               CASE menu_type WHEN 'M' THEN '메뉴' WHEN 'S' THEN '서비스' END as menu_type_name,
+               (SELECT CASE WHEN COUNT(*) = 0 THEN 'N' ELSE 'Y' END 
+                  FROM role_menu_list RL 
+                 WHERE RL.menu_code = M.menu_code) as menu_selected
+          FROM menu_list M 
+
+	</select>
+	
+
+
+</mapper>

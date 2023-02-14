@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 공지사항 관리
+ * @author 권기완
+ * @since 2022. 06. 15.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2022.06.15.   	권기완          최초 생성
+ -->
+ <mapper namespace="NoticeMngDAO">
+ 
+ 	<!-- 공지사항 리스트 조회하기 -->
+	<select id="selectNoticeList" parameterType="map" resultType="resultCamelMap">
+			with a as (
+		   				SELECT 	  a.bsct_se as bsctSe
+		   						, a.bsct_sn as notice_pk
+				   				, a.bsct_sj as title
+				   				, a.bsct_cn as contents
+				   				, a.rgtr_id as reg_id
+				   				, to_char(a.reg_dt,'YYYY-MM-DD') as reg_date
+				   				, (ROW_NUMBER() OVER(ORDER BY a.reg_dt asc)) as row_num
+		     			FROM mngr_bsct_list a
+	    				WHERE 1=1
+	    				and a.del_yn = 'N'
+	    				and a.bsct_se = #{bsctSe}
+	    	<choose>
+					<when test="gb == 'searchAll'">
+						<if test="searchForm != '' and searchForm != null ">
+						  		AND (a.rgtr_id LIKE '%'||#{searchForm}||'%'OR a.bsct_cn LIKE '%'||#{searchForm}||'%' OR a.bsct_sj LIKE '%'||#{searchForm}||'%')
+						</if>
+					</when>
+					<otherwise>
+					  	<if test="gb =='postTitle'">
+					  		AND a.bsct_sj LIKE '%'||#{searchForm}||'%'
+					  	</if>
+					  	<if test="gb =='postCont'">
+					  		AND a.bsct_cn LIKE '%'||#{searchForm}||'%'
+					  	</if>
+					  	<if test="gb =='postName'">
+					  		AND a.rgtr_id LIKE '%'||#{searchForm}||'%'
+					  	</if>
+					</otherwise>		 
+		</choose>
+		    order by a.reg_dt desc
+		   )
+	   	select *
+		 from a , (select count(1) as cnt from a) as b
+		 order by notice_pk desc
+		 <choose>
+		 	<when test="nowPageCnt != null and nowPageCnt != '' ">
+			    LIMIT #{nowPageCnt}::INTEGER 
+			</when>	 
+			<otherwise>
+				LIMIT 10
+			</otherwise>
+		 </choose>
+		 <choose>
+		 	<when test="nextNo != null and nextNo != '' ">
+				 OFFSET #{nextNo}::INTEGER
+			</when>	 
+			<otherwise>
+				OFFSET 0
+			</otherwise>
+		 </choose>
+	</select>
+	
+	<!-- 공지사항 삭제 -->
+	<delete id="deleteNoticeList">
+	    DELETE 	FROM mngr_bsct_list
+	 	WHERE	bsct_sn IN
+    	<foreach item="item" index="index" collection="chkArr" open="(" close=")" separator=",">
+            #{item}::integer
+    	</foreach>
+	</delete>
+	<!-- 공지사항 파일삭제 -->
+	<delete id="deleteNoticeListFile">
+	    DELETE 	FROM mngr_bsct_file_dtl
+	 	WHERE 1=1 
+	 		and bsct_se = #{bsctSe}
+	 		and bsct_sn IN
+    	<foreach item="item" index="index" collection="chkArr" open="(" close=")" separator=",">
+            #{item}::integer
+    	</foreach>
+	</delete>
+	
+ </mapper>

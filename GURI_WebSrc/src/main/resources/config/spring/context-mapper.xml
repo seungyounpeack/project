@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd">
+
+	<!-- SqlSession setup for MyBatis Database Layer -->
+	<!-- <bean id="sqlSession" class="org.mybatis.spring.SqlSessionFactoryBean"> -->
+	
+	<bean id="sqlSession" class="kr.go.guri.cmm.service.RefreshableSqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation" value="classpath:/config/sqlmap/config/sql-mapper-config.xml" />
+		<!-- <property name="mapperLocations" value="classpath:/config/sqlmap/mappers/${Globals.DbType}/*_SQL.xml" /> -->
+		<property name="mapperLocations">
+			<list>
+				<value>classpath:/config/sqlmap/mappers/postgres/dashBoard/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/dashBoard/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/dashBoard/**/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/login/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/login/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/login/**/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/manager/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/manager/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/manager/**/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/solution/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/solution/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/solution/**/**/*_SQL.xml </value>
+				<value>classpath:/config/sqlmap/mappers/postgres/common/*_SQL.xml </value>
+			</list>
+		</property>
+		<property name="interval" value="5000" />	<!-- 5초 마다 갱신 -->
+	</bean>
+	
+	<!-- 엑셀 업로드를 위한 Session Template -->
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg ref="sqlSession" />
+	</bean>
+
+</beans>

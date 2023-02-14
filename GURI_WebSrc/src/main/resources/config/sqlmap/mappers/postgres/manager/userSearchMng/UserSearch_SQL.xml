@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 사용자 조회 SQL
+ * @author 전동표
+ * @since 2020. 07. 01.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2020.07.01.   	전동표          최초 생성
+
+ -->
+<mapper namespace="UserSearchManage">
+
+	<!-- 사용자조회-->
+	<select id="selectSearchList" parameterType="map" resultType="resultCamelMap">
+		select ROW_NUMBER () OVER (ORDER BY a.user_id asc) as no
+            , a.user_id as user_id
+            , a.user_nm as user_name
+            , a.inst_nm || ' ' || a.dep_nm as dept_name
+            , a.jbgd_nm as position_name
+            , a.jbps_nm AS grade_name
+            , a.clss_nm as class_name
+         from mngr_user_info as a
+        where 1=1
+          and a.user_id != ''
+      <if test="department != '' and department != null">                                      
+		  and a.dep_cd =  #{department}
+	  </if>
+	  <if test="position_id != '' and position_id != null">                                      
+		  and a.jbgd_cd =  #{position_id}
+	  </if>
+	  <if test="userName != '' and userName != null">                                      
+		  and a.user_nm like '%'||#{userName}||'%'
+	  </if>
+       order by a.user_id asc;
+	</select>
+	
+	<select id="getDeptAllGetList" resultType="resultCamelMap">
+		<if test="defaultValue != '' and defaultValue != null">  
+ 		SELECT #{defaultValue} as code, #{defaultText} as name 
+ 		UNION ALL
+ 		</if>
+ 		select DISTINCT dep_cd as code, dep_nm as name
+		  from mngr_user_info
+		 where 1=1
+		   and dep_cd <![CDATA[<>]]>  '38200000000' 
+		   and dep_cd <![CDATA[<>]]>  '0'
+		   AND dep_nm IS NOT NULL
+		   AND trim(dep_nm) <![CDATA[<>]]> ''
+		order by dep_cd asc
+		
+	</select>
+	
+	<select id="getPositionList" resultType="resultCamelMap">
+		<if test="defaultValue != '' and defaultValue != null">  
+ 		SELECT #{defaultValue} as code, #{defaultText} as name 
+ 		UNION ALL
+ 		</if>
+ 		SELECT id::text as code, text as name	
+	  	  FROM (
+	  	  		SELECT distinct jbgd_cd as id, jbgd_nm as text
+                  FROM mngr_user_info
+                 WHERE 1=1
+                   AND jbgd_cd is not null
+                   AND COALESCE(jbgd_cd::text, '') <![CDATA[<>]]> ''
+                order by jbgd_cd asc
+				) a
+	</select>
+	
+</mapper>

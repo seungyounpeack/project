@@ -1,0 +1,168 @@
+@charset "utf-8";
+/* CSS Document */
+
+/*조직도*/
+.organ_wrap {min-width:3840px;padding:30px 25px 55px 25px;text-align:center;margin:0 auto}
+.first_area {width:100%;position:relative;text-align:center;margin:0 auto}
+.dept01 {display:inline-block;margin:0 auto;width:100%;height:65px;text-align:center}
+.dept02 {display:inline-block;margin:0 auto;width:100%;height:140px;background:url("/dist/images/organ/line.png") repeat-y center bottom;padding-top:40px;text-align:center}
+.name_box {display:inline-block;width:158px;height:65px;border-radius:5px;background-color:#404040;text-align:center;margin:0 auto;}
+.name_box dt {display:inline-block;width:100%;height:25px;text-align:center;color:#2a2a2a;font-size:14px;border-radius:5px 5px 0 0;font-weight:normal;position:relative}
+.name_box dd {clear:both;float:left;width:100%;height:40px;padding:0 16px 0 12px;text-align:left}
+.name_box dd .org_pic {float:left;width:30px;height:30px;border-radius:50%;background-color:#2a2a2a;margin:5px 0 0 0}
+.name_box dd .org_pic img {width:30px;height:30px;border-radius:50%}
+.name_box dd .org_name {float:right;width:100px;text-align:right;padding-top:11px;letter-spacing:0.25em}
+
+.secretary_all {position:absolute;top:52px;right:50%}
+.secretary_area {min-width:358px;min-height:160px;position:relative;margin-right:219px;text-align:center}
+.below_area {clear:both;width:100%;text-align:center}
+.connect_line {width:320px;height:1px;background-color:#fff;font-size:0}
+.branch_line {min-width:92px;height:1px;background-color:#fff;text-align:center;margin:0 79px 0 79px;font-size:0}
+.branch_vertical {width:1px;height:20px;background-color:#fff;margin:0 auto;font-size:0}
+.dept01_1 {display:inline-block;width:158px;height:65px}
+.dept01_1_2 {display:inline-block;width:158px;height:85px;background:url("/dist/images/organ/line.png") repeat-y center top;padding-top:20px;margin-right:42px}
+.secretary_area .dept01_1_2:last-child, .inspection_area .dept01_1_2:last-child, .fourth_area .sub_group:last-child, .below_area .dept04:last-child .name_vbox {margin-right:0 !important}
+.second_area .bureau:last-child, .third_area .bureau:last-child, .third_area .sub_group:last-child, .fourth_area .bureau:last-child {padding-right:0 !important}
+
+.inspection_all {position:absolute;top:170px;left:50%}
+.inspection_area {min-width:558px;min-height:160px;position:relative;margin-left:117px;text-align:center}
+.loc_left {position:absolute;top:34px;right:0}
+.loc_right {position:absolute;top:34px;left:0}
+.hg150 {height:150px !important}
+/* .mn02 {margin:0 289px 0 392px !important} */
+.pg02 {padding:0 21px 0 21px !important}
+
+.second_area {clear:both;width:100%;position:relative;text-align:center;margin:0 auto;}
+.bureau {display:inline-block;min-width:158px;padding:0 25px 0 0;text-align:center;position:relative;background:url(/dist/images/organ/line.png) repeat-x 0 0;margin-right:-3px} 
+.bureau .bureau_line {min-width:92px;height:1px;background-color:#fff;text-align:center;margin:0 46px 0 51px;font-size:0}
+.name_vbox {display:inline-block;width:92px;height:140px;border-radius:5px;background-color:#404040;text-align:center;margin-right:10px;}
+.name_vbox dt {display:inline-block;width:100%;height:36px;text-align:center;color:#2a2a2a;font-size:14px;padding:10px 2px 0 2px;border-radius:5px 5px 0 0;font-weight:normal;position:relative}
+.name_vbox dd {display:inline-block;width:100%;height:104px;text-align:center}
+.name_vbox dd .org_pic {display:inline-block;width:30px;height:30px;border-radius:50%;background-color:#2a2a2a;margin:13px 0 0 0;text-align:center}
+.name_vbox dd .org_pic img {width:30px;height:30px;border-radius:50%}
+.name_vbox dd .org_name {display:inline-block;width:100%;text-align:center;letter-spacing:0.1em;margin:0;padding-top:4px}
+.name_vbox dd .txt_tiny {display:inline-block;width:100%;text-align:center;padding-top:9px}
+.dept04, .dept05 {display:inline-block;}
+.second_area .bureau:last-child, .second_area .bureau:first-child {background:0 none !important}
+
+.third_area, .fourth_area {clear:both;width:100%;margin-top:35px;}
+.sub_group {display:inline-block;min-width:200px;margin-right:35px}
+.title_box {display:block;min-width:200px;text-align:center;border-top:1px solid #d8d8d8;border-right:1px solid #d8d8d8;border-left:1px solid #d8d8d8;padding:7px 10px 8px 10px;font-size:16px;color:#d8d8d8;margin:0 auto}
+
+.dong_branch {display:inline-block;margin:-27px 0 0 30px}
+.dong_title {display:block;min-width:100px;text-align:center;background-color:#4d4d4d;padding:6px 10px 7px 10px;font-size:14px;color:#fff}
+.dong_vertical {width:1px;height:40px;background-color:#fff;margin:0 auto;font-size:0}
+
+
+/* .slider_area {clear:both;width:100%;margin-top:35px;text-align:center} */
+.team_all {display:inline-block;width:92px;text-align:center;margin-right:10px}
+.slider_line {min-width:92px;height:1px;background-color:#fff;text-align:center;margin:0 51px 0 51px;font-size:0}
+/*210727 체크박스수정*/
+.name_vbox dt input.hide_index {z-index:0;position:absolute;top:50%;left:50%}
+.name_vbox dt .name_part {z-index:1;display:inline-block;width:100%;height:36px;position:absolute;top:0;left:0;border-radius:5px 5px 0 0;padding:10px 2px 0 2px;}
+.name_box dt input.hide_index {z-index:0;position:absolute;top:15%;left:50%}
+.name_box dt .name_part {z-index:1;display:inline-block;width:100%;height:25px;border-radius:5px 5px 0 0;padding:5px 10px 0 10px;position:absolute;top:0;left:0}
+
+
+/*레이어팝업*/
+#pop_wrap {
+    height: 250px;
+    width: 340px;
+    box-shadow:0 0 3px 2px #212121;
+    background-color:#404040;
+	border-radius:5px;
+    z-index: 9999;
+    margin-left: 49%;
+    margin-top: 20%;
+	display:none;
+    position: fixed;
+}
+.pop_all {position:relative;width:100%;height:250px;padding:20px}
+
+#close_button {position:absolute;top:14px;right:14px;width:11px;height:11px;background:url(/dist/images/common/btn_popclose.png) no-repeat 0 0;font-size:0}
+.work_info {clear:both;float:left;width:100%;}
+.pic_profile {float:left;width:84px;height:84px;border-radius:50%;background-color:#2a2a2a;}
+.pic_profile img {width:84px;height:84px;border-radius:50%;}
+.text_profile {float:left;width:185px;margin:8px 0 0 15px}
+.text_profile dt {float:left;width:100%;font-size:18px;border-bottom:1px solid #626262;padding-bottom:5px;margin-bottom:2px}
+.duty {font-size:14px;font-weight:300 !important;line-height:170%;padding-left:5px}
+.text_profile dd {float:left;width:100%;font-weight:300 !important;padding-top:7px;font-size:14px;}
+
+.work_do {clear:both;display:inline-block;width:100%;height:105px;margin-top:20px;background-color:#343434;overflow-y:auto;padding:12px}
+.work_list {display:inline-block;width:100%;}
+.work_list li {display:inline-block;width:100%;padding:0 0 10px 8px;background:url(/dist/images/common/bullet_3_3.png) no-repeat left 6px;font-size:14px}
+
+
+/*20210731추가*/
+#full_pop {clear:both;width:100%;height:100%;position:relative}
+#full_pop #container {border-bottom:0 none}
+
+.sec_b_area {clear:both;float:left;text-align:left;width:100%;height:1px;background-color:#2a2a2a;font-size:0}
+.second_area .bureau:last-child .sec_b_area .sec_b_line {width:50% !important;}
+.fst_chd .sec_b_area .sec_b_line {float:right !important;width:50% !important;text-align:right !important;}
+.sec_b_area .sec_b_line {float:left;width:100%;height:1px;background-color:#fff;font-size:0}
+.third_area .bureau .sec_b_area, .fourth_area .bureau .sec_b_area {display:none}
+
+.d_only .branch_line {display:none}
+.organ_title {min-width:3840px;width:100%;height:50px;padding:14px 0 0 20px;font-size:18px;color:#fff;}
+.org_bug {
+    background: #e6d300 url(budget_go.png) no-repeat 93% 10px;
+    width: 200px;
+    min-height: 48px;
+    text-align: center;
+    margin: auto;
+    padding: 12px 12px 12px 0;
+    cursor: pointer;
+    color: black;
+    border-radius: 10px;
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    z-index: 1;
+}
+.org_p {
+    color: black;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 120%;
+}
+.modal_02 {position:fixed;top:0;right:0;z-index:999;height:100% !important}
+.modal_dialog_02 {display:none;min-width:132px;height:100% !important}
+.modal_body_02 {height:100%;background-color:#1e1e1e;padding:15px 15px 25px 15px;}
+/* .modal-body{
+       height:100vh;
+       overflow:auto;
+       background-color:#1e1e1e;
+       padding:15px;
+ } */
+ .sl_btarea {position:absolute;top:15px;left:15px}
+ .log-btn-cancel {width:150px;font-size:14px;border-radius:3px;border:1px solid #9c9c9c;padding:2px 4px 2px 4px;text-align:center}
+
+ 
+ .name_vbox dd:hover, .name_vbox dd:active { color : #ffffff; }
+.name_box dd:hover, .name_box dd:active { color : #ffffff; }
+
+
+.mn02 {margin:0 327px 0 432px !important}
+.second_area .bureau {background:none !important}
+.second_area .bureau .sec_b_area {display:none}
+
+.slider_area {clear:both;width:100%;height:96%;margin-top:35px;text-align:center;overflow-y:scroll}
+
+@media all and (min-width:3840px) {
+
+	.mn02 {margin:0 145px 0 196px !important}
+
+}
+
+
+
+.modal-body{
+
+	height:100vh;
+
+	background-color:#1e1e1e;
+
+	padding:15px 15px 25px 15px;
+
+ }

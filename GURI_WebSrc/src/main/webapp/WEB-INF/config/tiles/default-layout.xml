@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+
+<tiles-definitions>
+
+	
+	
+	
+	<!-- dashBoard Template 시작 -->
+	<definition name="dashBoard-template" template="/WEB-INF/tiles/dashBoard/dashBoard_layout.jsp">
+		<put-attribute name="header" value="/WEB-INF/tiles/dashBoard/dashBoard_header.jsp" />
+		<put-attribute name="footer" value="/WEB-INF/tiles/dashBoard/dashBoard_footer.jsp" />
+	</definition>
+
+	<definition name="dashBoard-content/*" extends="dashBoard-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}.jsp" />
+	</definition>
+
+	<definition name="dashBoard-content/*/*" extends="dashBoard-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}.jsp" />
+	</definition>
+
+	<definition name="dashBoard-content/*/*/*" extends="dashBoard-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}/{3}.jsp" />
+	</definition>
+	
+	<!-- dashBoard Template 끝 -->
+	
+	<!-- manager Template 시작 -->
+	<definition name="manager-template" template="/WEB-INF/tiles/manager/manager_layout.jsp">
+		<put-attribute name="header" value="/WEB-INF/tiles/manager/manager_header.jsp" />
+		<put-attribute name="footer" value="/WEB-INF/tiles/manager/manager_footer.jsp" />
+	</definition>
+
+	<definition name="manager-content/*" extends="manager-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}.jsp" />
+	</definition>
+
+	<definition name="manager-content/*/*" extends="manager-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}.jsp" />
+	</definition>
+
+	<definition name="manager-content/*/*/*" extends="manager-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}/{3}.jsp" />
+	</definition>
+	
+	<definition name="manager-content/*/*/*/*" extends="manager-template">
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}/{3}/{4}.jsp" />
+	</definition>
+	
+	<!-- dashBoard Template 끝 -->
+	
+
+
+	<!-- Main Popup Template 끝 -->
+
+</tiles-definitions>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 관리자 > 사용자 권한 관리 SQL
+ * @author 김부권
+ * @since 2022. 06. 28.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *     수정일			       수정자			                            수정내용
+ *  =============     ==========		========================================
+ *  2022. 06. 28.       김부권                                                최초 생성
+
+ -->
+<mapper namespace="UserAuthMng">
+	
+	<!-- 유저 목록 조회하기 -->
+	<select id="selectUserList" parameterType="map" resultType="resultCamelMap">
+		select ROW_NUMBER () OVER (ORDER BY a.user_id asc) as no
+            , a.user_id as user_id
+            , a.user_nm as user_name
+            , a.inst_nm || ' ' || a.dep_nm as dept_name
+            , a.jbgd_nm as position_name
+            , a.jbps_nm AS grade_name
+            , a.clss_nm as class_name
+         from mngr_user_info as a
+        where 1=1
+          and a.user_id != ''
+      <if test="department != '' and department != null">                                      
+		  and a.dep_cd =  #{department}
+	  </if>
+	  <if test="position_id != '' and position_id != null">                                      
+		  and a.jbgd_cd =  #{position_id}
+	  </if>
+	  <if test="userName != '' and userName != null">                                      
+		  and a.user_nm like '%'||#{userName}||'%'
+	  </if>
+       order by a.user_id asc;
+		  
+	</select>
+	
+	<!-- 상위부서 목록 가져오기 -->
+	<select id="selectUpperDetpList" resultType="resultCamelMap">
+		SELECT *
+		  FROM (
+		         select DISTINCT inst_id as code, inst_nm as name
+  				   from mngr_user_info
+		          WHERE 1=1
+		            AND inst_id is not null
+                   AND COALESCE(inst_id::text, '') <![CDATA[<>]]> ''
+                order by inst_id asc
+		       ) a
+		   ORDER BY code asc;
+	</select>
+	
+	<!-- 직급 목록 가져오기 -->
+	<select id="selectPosList" resultType="resultCamelMap">
+		SELECT  DISTINCT jbgd_cd as code, jbgd_nm as name
+		  FROM mngr_user_info
+		 WHERE 1=1
+		   AND jbgd_cd <![CDATA[<>]]> '0'
+		   AND jbgd_nm IS NOT NULL 
+		   AND COALESCE(jbgd_cd, '') <![CDATA[<>]]> ''
+		   ORDER BY jbgd_cd ASC;
+	</select>
+	
+	
+	<!-- 하위 부서 목록 가져오기 -->
+	<select id="selectSectionDeptList" parameterType="map" resultType="resultCamelMap">
+		 SELECT DISTINCT dep_cd as code, dep_nm as name 
+		   FROM mngr_user_info
+		  WHERE 1=1
+		    AND inst_id = #{department}
+		    AND dep_cd IS NOT NULL
+		    AND dep_cd <![CDATA[<>]]> ''
+		ORDER BY dep_cd ASC;
+	</select>
+	
+	<!-- 유저 권한 목록 가져오기 -->
+	<select id="selectUserRoleList" parameterType="map" resultType="resultCamelMap">
+		SELECT cd_id as role_code, 
+		       cd_nm AS role_name,
+		       cd_desc AS role_desc,
+		       (SELECT CASE WHEN COUNT(*) = 0 THEN 'N'
+		                    ELSE 'Y' END as role_selected
+				  FROM mngr_user_role DR
+				 WHERE user_id = #{userId}
+				   AND DR.role_code = R.cd_id
+			   )
+		  FROM mngr_code as R
+		 WHERE grp_cd_id='GRP0006'
+		ORDER BY cd_id
+		
+	</select>
+	
+	
+	
+	
+	<!-- 유저 설정 권한 정보 저장하기 -->
+	<insert id="insertUserRoleInfo" parameterType="map">
+
+		INSERT INTO mngr_user_role
+			(user_id, role_code, create_date, create_user)
+		VALUES
+			(#{userId}, #{roleCode}, NOW(), #{loginId})
+			
+	</insert>
+	
+	
+	<!-- 유저 설정 정보 삭제하기 -->
+	<select id="selectUserRoleInfo" parameterType="map" resultType="int">
+		
+		 select count(1) 
+		   FROM mngr_user_role
+		  WHERE user_id = #{userId}
+		 
+	</select>
+	
+	<!-- 유저 설정 정보 삭제하기 -->
+	<delete id="deleteUserRoleInfo" parameterType="map">
+		
+		 DELETE FROM mngr_user_role
+		 WHERE user_id = #{userId}
+		 
+	</delete>
+</mapper>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * 로그인 페이지
+ * @author 김부권
+ * @since 2021.10.07.
+ * @version 1.0
+ * @see
+ *
+ * <pre>
+ * << 개정이력(Modification Information) >>
+ *
+ *  수정일			수정자			수정내용
+ *  ==========    	==========		========================================
+ *  2021.10.07.   	김부권          최초 생성
+
+ -->
+<mapper namespace="LoginMapper">
+	
+	<!-- sso 테이블 유저 ID검색 -->
+	<select id="selectSearchInfo" parameterType="map" resultType="resultCamelMap">
+	   
+		select logon_id  as code, logon_id as name
+	      from ORGAN_VIEW
+	     where 1=1 
+	       and logon_id like  ''||#{userId}||'%'
+	       and user_name = #{userName}
+	
+	</select>
+	
+	<!-- 유저 테이블에서 logon_id 중복 체크 -->
+	<select id="selectCheckUserInfo" parameterType="map" resultType="int">
+	   
+		select count(1) as cnt
+	      from mng_user_info
+	     where 1=1 
+	       and logon_id = #{createUserId}
+	
+	</select>
+	
+ 	<!-- 유저 등록 -->
+	<insert id="insertUserInfo" parameterType="map">
+		insert into mng_user_info(logon_id, logon_pw, crt_dt, aprv_dt, aprv_yn)
+		values(#{createUserId}, #{passwordCoding}, now(), null, 'N');
+				
+	</insert>
+	
+		
+	<!-- 유저 로그인 -->
+	<select id="selectUserLogin" parameterType="map" resultType="resultCamelMap">
+	   
+		select logon_id 
+	      from mng_user_info
+	     where 1=1 
+	       and logon_id = #{userId}
+	       and logon_pw = #{passwordCoding}
+	       <!-- and aprv_yn = 'Y' -->
+	
+	</select>
+	
+	<!-- 유저 회원가입 승인 -->
+	<update id="updateLogonUserAuth" parameterType="map">
+		UPDATE  mng_user_info
+           SET 
+				aprv_yn = #{userYN},
+				aprv_dt = now()
+          WHERE 1=1
+            AND logon_id = #{userId}
+	</update>
+
+</mapper>
